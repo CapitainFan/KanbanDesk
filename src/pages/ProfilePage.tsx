@@ -10,7 +10,7 @@ import { setProfile } from '../store/authSlice'
 import toast from 'react-hot-toast'
 
 export function ProfilePage() {
-  const { profile } = useAuthContext()
+  const { profile, user } = useAuthContext()
   const dispatch = useAppDispatch()
   const [name, setName] = useState(profile?.name ?? '')
   const [saving, setSaving] = useState(false)
@@ -41,6 +41,9 @@ export function ProfilePage() {
         </div>
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="text-sm text-text-secondary bg-sidebar dark:bg-sidebar-dark rounded-lg p-3 break-all">
+            <span className="font-medium">User ID:</span> {user?.id}
+          </div>
           <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>

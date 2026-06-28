@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   DndContext, DragOverlay, closestCorners,
-  type DragStartEvent, type DragEndEvent, type DragOverEvent,
+  type DragStartEvent, type DragEndEvent,
   PointerSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
-import type { Column as ColumnType, Task } from '../../types'
+import type { Task } from '../../types'
 import { getColumns, createColumn, deleteColumn, updateColumn } from '../../services/columnService'
-import { getTasks, createTask, moveTask, reorderTasks } from '../../services/taskService'
+import { getTasks, createTask, moveTask } from '../../services/taskService'
 import { getBoardMembers } from '../../services/boardService'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import {
   setColumns, addColumn, removeColumn, setTasks, addTask,
-  setMembers, setLoading, moveTaskInState,
+  setMembers, setLoading,
 } from '../../store/boardSlice'
 import { openTaskModal } from '../../store/uiSlice'
 import { useRealtime } from '../../hooks/useRealtime'
@@ -35,15 +35,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 
   useRealtime(boardId)
 
-  useEffect(() => {
-    dispatch(setLoading(true))
-    Promise.all([
-      getColumns(boardId).then((cols) => dispatch(setColumns(cols))),
-      getBoardMembers(boardId).then((members) => dispatch(setMembers(members))),
-    ]).finally(() => dispatch(setLoading(false)))
-  }, [boardId, dispatch])
-
-  useEffect(() => {
+  const reloadAllTasks = useCallback(() => {
     if (columns.length === 0) return
     const colIds = columns.map((c) => c.id)
     getTasks(colIds).then((ts) => {
@@ -57,7 +49,17 @@ export function BoardView({ boardId }: BoardViewProps) {
         dispatch(setTasks({ columnId: colId, tasks: grouped[colId] ?? [] }))
       }
     })
-  }, [columns.length, dispatch])
+  }, [columns, dispatch])
+
+  useEffect(() => {
+    dispatch(setLoading(true))
+    Promise.all([
+      getColumns(boardId).then((cols) => dispatch(setColumns(cols))),
+      getBoardMembers(boardId).then((members) => dispatch(setMembers(members))),
+    ]).finally(() => dispatch(setLoading(false)))
+  }, [boardId, dispatch])
+
+  useEffect(() => { reloadAllTasks() }, [reloadAllTasks])
 
   const handleAddColumn = async () => {
     if (!newColTitle.trim()) return
@@ -81,7 +83,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 
   const handleRenameColumn = async (colId: string, title: string) => {
     try {
-      const updated = await updateColumn(colId, { title } as Partial<ColumnType>)
+      const updated = await updateColumn(colId, { title } as never)
       dispatch({ type: 'board/updateColumnInState', payload: updated })
     } catch { toast.error('Failed to rename column') }
   }
@@ -105,36 +107,61 @@ export function BoardView({ boardId }: BoardViewProps) {
     setActiveTask((event.active.data.current?.task as Task) ?? null)
   }
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveTask(null)
     const { active, over } = event
-    if (!over) return
+    if (!over || active.id === over.id) return
+    const taskId = active.id as string
+    const overId = over.id as string
     const activeColId = findColumnOfTask(active.id as string)
     const overColId =
       over.data.current?.type === 'column'
         ? (over.id as string)
         : findColumnOfTask(over.id as string)
-    if (!activeColId || !overColId || activeColId === overColId) return
-    dispatch(moveTaskInState({
-      taskId: active.id as string,
-      fromColumnId: activeColId,
-      toColumnId: overColId,
-      newPosition: 0,
-    }))
-  }
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveTask(null)
-    const { active, over } = event
-    if (!over) return
-    const taskId = active.id as string
-    const overId = over.id as string
-    const activeColId = findColumnOfTask(taskId)
-    const overColId =
-      over.data.current?.type === 'column' ? overId : findColumnOfTask(overId)
     if (!activeColId || !overColId) return
-    if (activeColId !== overColId) {
-      await moveTask(taskId, overColId, 0)
-      const ts = tasks[overColId] ?? []
-      await reorderTasks(ts.map((t, i) => ({ id: t.id, position: i })))
+
+    try {
+      const targetTasks = tasks[overColId] ?? []
+      const overIdx = over.data.current?.type === 'column'
+        ? targetTasks.length
+        : targetTasks.findIndex((t) => t.id === overId)
+      const newPos = overIdx >= 0 ? overIdx : targetTasks.length
+
+      if (activeColId === overColId) {
+        // Reorder within same column
+        const arr = [...targetTasks]
+        const fromIdx = arr.findIndex((t) => t.id === taskId)
+        if (fromIdx === -1) return
+        const [task] = arr.splice(fromIdx, 1)
+        const insertAt = newPos > fromIdx ? newPos - 1 : newPos
+        arr.splice(insertAt, 0, task)
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i].position !== i) {
+            await moveTask(arr[i].id, overColId, i)
+          }
+        }
+      } else {
+        // Move between columns: update positions in both columns
+        await moveTask(taskId, overColId, newPos)
+        const srcTasks = (tasks[activeColId] ?? []).filter((t) => t.id !== taskId)
+        for (let i = 0; i < srcTasks.length; i++) {
+          if (srcTasks[i].position !== i) {
+            await moveTask(srcTasks[i].id, activeColId, i)
+          }
+        }
+        const dstTasks = targetTasks.filter((t) => t.id !== taskId)
+        for (let i = 0; i < dstTasks.length; i++) {
+          const pos = i >= newPos ? i + 1 : i
+          if (dstTasks[i].position !== pos) {
+            await moveTask(dstTasks[i].id, overColId, pos)
+          }
+        }
+      }
+      reloadAllTasks()
+    } catch (e) {
+      console.error('Drag error:', e)
+      toast.error('Move failed: ' + (e instanceof Error ? e.message : 'unknown'))
+      reloadAllTasks()
     }
   }
 
@@ -145,7 +172,6 @@ export function BoardView({ boardId }: BoardViewProps) {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex-1 overflow-x-auto p-4">
@@ -164,21 +190,17 @@ export function BoardView({ boardId }: BoardViewProps) {
           <div className="flex-shrink-0 w-72 sm:w-80">
             {showNewCol ? (
               <div className="bg-sidebar dark:bg-sidebar-dark rounded-xl p-3 space-y-2">
-                <input
-                  value={newColTitle}
-                  onChange={(e) => setNewColTitle(e.target.value)}
+                <input value={newColTitle} onChange={(e) => setNewColTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddColumn()}
                   placeholder="Column title..." autoFocus
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500" />
                 <div className="flex gap-1">
                   <Button size="sm" onClick={handleAddColumn}>Add</Button>
                   <Button size="sm" variant="ghost" onClick={() => setShowNewCol(false)}>Cancel</Button>
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setShowNewCol(true)}
+              <button onClick={() => setShowNewCol(true)}
                 className="w-full bg-sidebar dark:bg-sidebar-dark rounded-xl p-3 text-sm text-text-secondary hover:text-text-primary dark:hover:text-text-primary-dark transition-colors"
               >+ Add Column</button>
             )}
@@ -186,11 +208,7 @@ export function BoardView({ boardId }: BoardViewProps) {
         </div>
       </div>
       <DragOverlay>
-        {activeTask ? (
-          <div className="w-72 opacity-90">
-            <TaskCard task={activeTask} onClick={() => {}} />
-          </div>
-        ) : null}
+        {activeTask ? <div className="w-72 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
       </DragOverlay>
     </DndContext>
   )

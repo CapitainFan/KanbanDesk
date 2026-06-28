@@ -1,23 +1,35 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { Layout } from '../components/shared/Layout'
 import { BoardView } from '../components/board/BoardView'
 import { TaskModal } from '../components/task/TaskModal'
 import { MemberManagement } from '../components/board/MemberManagement'
-import { useAppDispatch, useAppSelector } from '../hooks/useAppStore'
+import { useAppDispatch } from '../hooks/useAppStore'
 import { setCurrentBoard } from '../store/boardSlice'
 
 export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
   const dispatch = useAppDispatch()
-  const currentBoard = useAppSelector((s) =>
-    s.board.boards.find((b) => b.id === boardId)
-  )
+  const [boardTitle, setBoardTitle] = useState<string | null>(null)
 
+  // Fetch board title directly (works even after page refresh when store is empty)
   useEffect(() => {
-    if (currentBoard) dispatch(setCurrentBoard(currentBoard))
+    if (!boardId) return
+    setBoardTitle(null)
+    ;(async () => {
+      const { data } = await supabase
+        .from('boards')
+        .select('title')
+        .eq('id', boardId)
+        .single()
+      if (data) {
+        setBoardTitle(data.title)
+        dispatch(setCurrentBoard({ id: boardId, title: data.title } as never))
+      }
+    })()
     return () => { dispatch(setCurrentBoard(null)) }
-  }, [currentBoard, dispatch])
+  }, [boardId, dispatch])
 
   if (!boardId) {
     return (
@@ -43,7 +55,7 @@ export function BoardPage() {
               </Link>
               <span className="text-text-secondary">/</span>
               <span className="font-medium text-text-primary dark:text-text-primary-dark">
-                {currentBoard?.title ?? 'Loading...'}
+                {boardTitle ?? 'Board'}
               </span>
             </div>
             <MemberManagement />

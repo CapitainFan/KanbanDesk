@@ -88,7 +88,14 @@ export async function addBoardMember(boardId: string, userId: string) {
     .select()
     .single()
   if (error) throw error
-  return data
+
+  // Attach profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+  return { ...data, profile: profile ?? null }
 }
 
 export async function findUserByEmail(email: string) {
