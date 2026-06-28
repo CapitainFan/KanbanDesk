@@ -36,9 +36,8 @@ export async function updateColumn(id: string, updates: Partial<Column>) {
     .update(updates)
     .eq('id', id)
     .select()
-    .single()
   if (error) throw error
-  return data
+  return data?.[0] ?? null
 }
 
 export async function deleteColumn(id: string) {

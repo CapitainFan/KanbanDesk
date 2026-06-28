@@ -1,15 +1,33 @@
 import { supabase } from '../lib/supabase'
 import type { Task } from '../types'
 
+async function attachAssignee(tasks: Task[]): Promise<Task[]> {
+  if (tasks.length === 0) return tasks
+  const assigneeIds = tasks
+    .filter((t) => t.assignee_id)
+    .map((t) => t.assignee_id as string)
+  if (assigneeIds.length === 0) return tasks
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', assigneeIds)
+  const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? [])
+  return tasks.map((t) => ({
+    ...t,
+    assignee: t.assignee_id ? (profileMap.get(t.assignee_id) ?? null) : null,
+  }))
+}
+
 export async function getTasks(columnIds: string[]): Promise<Task[]> {
   if (columnIds.length === 0) return []
   const { data, error } = await supabase
     .from('tasks')
-    .select('*, assignee:profiles(*)')
+    .select('*')
     .in('column_id', columnIds)
     .order('position')
   if (error) throw error
-  return data ?? []
+  return attachAssignee(data ?? [])
 }
 
 export async function createTask(
@@ -26,7 +44,7 @@ export async function createTask(
 
   const nextPosition = tasks?.[0]?.position != null ? tasks[0].position + 1 : 0
 
-  const { data, error } = await supabase
+  const { data: rawTask, error } = await supabase
     .from('tasks')
     .insert({
       column_id: columnId,
@@ -34,21 +52,25 @@ export async function createTask(
       position: nextPosition,
       created_by: userId,
     })
-    .select('*, assignee:profiles(*)')
+    .select()
     .single()
   if (error) throw error
-  return data
+
+  const [task] = await attachAssignee([rawTask])
+  return task
 }
 
 export async function updateTask(id: string, updates: Partial<Task>) {
-  const { data, error } = await supabase
+  const { data: rawTask, error } = await supabase
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select('*, assignee:profiles(*)')
+    .select()
     .single()
   if (error) throw error
-  return data
+
+  const [task] = await attachAssignee([rawTask])
+  return task
 }
 
 export async function deleteTask(id: string) {

@@ -64,17 +64,28 @@ export async function deleteBoard(boardId: string) {
 export async function getBoardMembers(boardId: string): Promise<BoardMember[]> {
   const { data, error } = await supabase
     .from('board_members')
-    .select('*, profile:profiles(*)')
+    .select('*')
     .eq('board_id', boardId)
   if (error) throw error
-  return data ?? []
+
+  // Attach profiles
+  const members = data ?? []
+  if (members.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', members.map((m) => m.user_id))
+    const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? [])
+    return members.map((m) => ({ ...m, profile: profileMap.get(m.user_id) ?? null }))
+  }
+  return members
 }
 
 export async function addBoardMember(boardId: string, userId: string) {
   const { data, error } = await supabase
     .from('board_members')
     .insert({ board_id: boardId, user_id: userId, role: 'member' })
-    .select('*, profile:profiles(*)')
+    .select()
     .single()
   if (error) throw error
   return data
