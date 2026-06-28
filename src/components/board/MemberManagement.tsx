@@ -26,7 +26,9 @@ export function MemberManagement() {
       dispatch(addMember(member))
       setUserId('')
       toast.success('Member added')
-    } catch { toast.error('Failed to add member') }
+    } catch {
+      toast.error('Failed to add member')
+    }
   }
 
   const handleRemove = async (memberId: string) => {
@@ -34,38 +36,15 @@ export function MemberManagement() {
       await removeBoardMember(memberId)
       dispatch(removeMember(memberId))
       toast.success('Member removed')
-    } catch { toast.error('Failed to remove member') }
+    } catch {
+      toast.error('Failed to remove member')
+    }
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">
-        Members ({members.length})
-      </h3>
-      <div className="space-y-2">
-        {members.map((m) => (
-          <div key={m.id} className="flex items-center gap-2 text-sm">
-            <Avatar
-              src={m.profile?.avatar_url}
-              name={m.profile?.name}
-              size="sm"
-            />
-            <span className="flex-1 text-text-primary dark:text-text-primary-dark">
-              {m.profile?.name ?? m.user_id.slice(0, 8)}
-            </span>
-            <span className="text-xs text-text-secondary uppercase">{m.role}</span>
-            {isOwner && m.role !== 'owner' && (
-              <Button variant="ghost" size="sm" onClick={() => handleRemove(m.id)}>
-                <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center">
       {isOwner && (
-        <div className="flex gap-1">
+        <div className="flex gap-1 mr-10">
           <input
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
@@ -78,6 +57,33 @@ export function MemberManagement() {
           </Button>
         </div>
       )}
+      <div>
+        <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2 text-start">
+          Members ({members.length})
+        </h3>
+        <div className="space-y-2 h-[80px] overflow-y-auto pr-1">
+          {members.map((m) => (
+            <div key={m.id} className="flex items-center gap-2 text-sm">
+              <Avatar
+                src={m.profile?.avatar_url}
+                name={m.profile?.name}
+                size="sm"
+              />
+              <span className="flex-1 text-text-primary dark:text-text-primary-dark">
+                {m.profile?.name ?? m.user_id.slice(0, 8)}
+              </span>
+              {isOwner && m.role !== 'owner' && (
+                <Button variant="ghost" size="sm" onClick={() => handleRemove(m.id)}>
+                  <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </Button>
+              )}
+              <span className="text-xs text-text-secondary uppercase">{m.role}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

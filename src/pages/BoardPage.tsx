@@ -13,7 +13,6 @@ export function BoardPage() {
   const dispatch = useAppDispatch()
   const [boardTitle, setBoardTitle] = useState<string | null>(null)
 
-  // Fetch board title directly (works even after page refresh when store is empty)
   useEffect(() => {
     if (!boardId) return
     setBoardTitle(null)
@@ -49,7 +48,7 @@ export function BoardPage() {
       <div className="flex flex-col h-[calc(100dvh-3.5rem)]">
         <div className="px-4 py-2 border-b border-border dark:border-border-dark bg-card dark:bg-card-dark">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-base ml-10">
               <Link to="/dashboard" className="text-text-secondary hover:text-blue-600 transition-colors">
                 Boards
               </Link>

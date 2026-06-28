@@ -30,6 +30,22 @@ export function ProfilePage() {
     }
   }
 
+  const handleCopyId = async () => {
+    if (!user?.id) return
+    try {
+      await navigator.clipboard.writeText(user.id)
+      toast.success('User ID copied!')
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = user.id
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      toast.success('User ID copied!')
+    }
+  }
+
   return (
     <Layout>
       <div className="max-w-md mx-auto px-4 py-8">
@@ -41,9 +57,36 @@ export function ProfilePage() {
         </div>
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <div className="text-sm text-text-secondary bg-sidebar dark:bg-sidebar-dark rounded-lg p-3 break-all">
-            <span className="font-medium">User ID:</span> {user?.id}
+
+          <div className="text-sm text-text-secondary bg-sidebar dark:bg-sidebar-dark rounded-lg p-3 flex items-center gap-1">
+            <span className="font-medium whitespace-nowrap">User ID:</span>
+            <span className="break-all flex-1 min-w-0">{user?.id}</span>
+            {user?.id && (
+              <button
+                type="button"
+                onClick={handleCopyId}
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                aria-label="Copy User ID"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-600 dark:text-gray-300"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            )}
           </div>
+
           <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
