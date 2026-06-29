@@ -11,7 +11,7 @@ import { getBoardMembers } from '../../services/boardService'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import {
   setColumns, addColumn, removeColumn, setTasks, addTask,
-  setMembers, setLoading,
+  setMembers, setLoading, moveTaskInState,
 } from '../../store/boardSlice'
 import { openTaskModal } from '../../store/uiSlice'
 import { useRealtime } from '../../hooks/useRealtime'
@@ -32,7 +32,6 @@ export function BoardView({ boardId }: BoardViewProps) {
   const [newColTitle, setNewColTitle] = useState('')
   const [showNewCol, setShowNewCol] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-
   useRealtime(boardId)
 
   const reloadAllTasks = useCallback(() => {
@@ -96,11 +95,11 @@ export function BoardView({ boardId }: BoardViewProps) {
     } catch { toast.error('Failed to add task') }
   }
 
-  const findColumnOfTask = (taskId: string): string | null => {
+  const findTaskColumn = (taskId: string): string | undefined => {
     for (const [colId, ts] of Object.entries(tasks)) {
       if (ts.some((t) => t.id === taskId)) return colId
     }
-    return null
+    return undefined
   }
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -113,20 +112,35 @@ export function BoardView({ boardId }: BoardViewProps) {
     if (!over || active.id === over.id) return
     const taskId = active.id as string
     const overId = over.id as string
-    const activeColId = findColumnOfTask(active.id as string)
+
+    // Find columns from current Redux state (no handleDragOver, so unchanged)
+    const activeColId = findTaskColumn(taskId)
     const overColId =
       over.data.current?.type === 'column'
         ? (over.id as string)
-        : findColumnOfTask(over.id as string)
+        : findTaskColumn(overId)
     if (!activeColId || !overColId) return
 
     try {
       const targetTasks = tasks[overColId] ?? []
-      const overIdx = over.data.current?.type === 'column'
-        ? targetTasks.length
-        : targetTasks.findIndex((t) => t.id === overId)
+      const overIdx =
+        over.data.current?.type === 'column'
+          ? targetTasks.length
+          : targetTasks.findIndex((t) => t.id === overId)
       const newPos = overIdx >= 0 ? overIdx : targetTasks.length
 
+      // OPTIMISTIC UPDATE: update Redux immediately before async API calls
+      // This prevents snap-back — CSS transitions animate items to new positions
+      dispatch(
+        moveTaskInState({
+          taskId,
+          fromColumnId: activeColId,
+          toColumnId: overColId,
+          newPosition: newPos,
+        })
+      )
+
+      // Persist to DB
       if (activeColId === overColId) {
         // Reorder within same column
         const arr = [...targetTasks]
@@ -208,7 +222,7 @@ export function BoardView({ boardId }: BoardViewProps) {
         </div>
       </div>
       <DragOverlay>
-        {activeTask ? <div className="w-72 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
+        {activeTask ? <div className="w-72 sm:w-80 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
       </DragOverlay>
     </DndContext>
   )
