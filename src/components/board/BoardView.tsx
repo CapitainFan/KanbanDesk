@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   DndContext, DragOverlay, closestCorners,
   type DragStartEvent, type DragEndEvent,
-  PointerSensor, useSensor, useSensors,
+  PointerSensor, TouchSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
 import type { Task } from '../../types'
 import { getColumns, createColumn, deleteColumn, updateColumn } from '../../services/columnService'
@@ -31,7 +31,10 @@ export function BoardView({ boardId }: BoardViewProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [newColTitle, setNewColTitle] = useState('')
   const [showNewCol, setShowNewCol] = useState(false)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  )
   useRealtime(boardId)
 
   const reloadAllTasks = useCallback(() => {
