@@ -127,12 +127,20 @@ export function BoardView({ boardId }: BoardViewProps) {
         over.data.current?.type === 'column'
           ? targetTasks.length
           : targetTasks.findIndex((t) => t.id === overId)
-      const newPos = overIdx >= 0 ? overIdx : targetTasks.length
+
+      // @dnd-kit: "over" means "insert BEFORE this item".
+      // When dragging DOWN, the user expects the task AFTER the hovered item.
+      // We push newPos forward by 1 so the task lands AFTER overIdx, not before it.
+      const activeIdx = targetTasks.findIndex((t) => t.id === taskId)
+      const newPosRaw = overIdx >= 0 ? overIdx : targetTasks.length
+      const newPos =
+        over.data.current?.type === 'column'
+          ? targetTasks.length
+          : activeIdx >= 0 && newPosRaw > activeIdx
+            ? newPosRaw + 1   // dragging DOWN → insert AFTER the over item
+            : newPosRaw        // dragging UP or cross-column → insert BEFORE the over item
 
       // Calculate the insertion index accounting for index shift after removal
-      //   dragging DOWN (newPos > fromIdx): items above shift up → insertAt = newPos - 1
-      //   dragging UP   (fromIdx > newPos): no shift → insertAt = newPos
-      //   cross-column (fromIdx === -1)    : no shift → insertAt = newPos
       const fromIdx = targetTasks.findIndex((t) => t.id === taskId)
       const insertAt = fromIdx >= 0 && newPos > fromIdx ? newPos - 1 : newPos
 

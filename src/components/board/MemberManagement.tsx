@@ -61,7 +61,7 @@ export function MemberManagement() {
         <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2 text-start">
           Members ({members.length})
         </h3>
-        <div className="space-y-2 h-[80px] overflow-y-auto pr-1">
+        <div className="space-y-2 h-[70px] overflow-y-auto pr-1">
           {members.map((m) => (
             <div key={m.id} className="flex items-center gap-2 text-sm">
               <Avatar
