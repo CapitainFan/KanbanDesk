@@ -129,14 +129,21 @@ export function BoardView({ boardId }: BoardViewProps) {
           : targetTasks.findIndex((t) => t.id === overId)
       const newPos = overIdx >= 0 ? overIdx : targetTasks.length
 
+      // Calculate the insertion index accounting for index shift after removal
+      //   dragging DOWN (newPos > fromIdx): items above shift up → insertAt = newPos - 1
+      //   dragging UP   (fromIdx > newPos): no shift → insertAt = newPos
+      //   cross-column (fromIdx === -1)    : no shift → insertAt = newPos
+      const fromIdx = targetTasks.findIndex((t) => t.id === taskId)
+      const insertAt = fromIdx >= 0 && newPos > fromIdx ? newPos - 1 : newPos
+
       // OPTIMISTIC UPDATE: update Redux immediately before async API calls
-      // This prevents snap-back — CSS transitions animate items to new positions
+      // Use insertAt (not newPos) so optimistic update matches persistence
       dispatch(
         moveTaskInState({
           taskId,
           fromColumnId: activeColId,
           toColumnId: overColId,
-          newPosition: newPos,
+          newPosition: insertAt,
         })
       )
 
@@ -144,10 +151,9 @@ export function BoardView({ boardId }: BoardViewProps) {
       if (activeColId === overColId) {
         // Reorder within same column
         const arr = [...targetTasks]
-        const fromIdx = arr.findIndex((t) => t.id === taskId)
-        if (fromIdx === -1) return
-        const [task] = arr.splice(fromIdx, 1)
-        const insertAt = newPos > fromIdx ? newPos - 1 : newPos
+        const taskFromIdx = arr.findIndex((t) => t.id === taskId)
+        if (taskFromIdx === -1) return
+        const [task] = arr.splice(taskFromIdx, 1)
         arr.splice(insertAt, 0, task)
         for (let i = 0; i < arr.length; i++) {
           if (arr[i].position !== i) {
@@ -222,7 +228,7 @@ export function BoardView({ boardId }: BoardViewProps) {
         </div>
       </div>
       <DragOverlay>
-        {activeTask ? <div className="w-72 sm:w-80 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
+        {activeTask ? <div className="w-72 sm:w-80 p-2 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
       </DragOverlay>
     </DndContext>
   )
