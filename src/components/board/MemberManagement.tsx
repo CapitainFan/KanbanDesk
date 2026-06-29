@@ -42,26 +42,27 @@ export function MemberManagement() {
   }
 
   return (
-    <div className="flex items-center">
+    <div className="flex flex-col md:flex-row md:items-center gap-2">
       {isOwner && (
-        <div className="flex gap-1 mr-10">
+        <div className="flex flex-col sm:flex-row gap-1 md:mr-10">
           <input
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             placeholder="User ID to invite..."
-            className="flex-1 px-2 py-1.5 text-sm rounded border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full sm:w-auto px-2 py-1.5 text-sm rounded border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <Button size="sm" onClick={handleAdd} disabled={!userId.trim()}>
+          <Button size="sm" onClick={handleAdd} disabled={!userId.trim()} className="self-start">
             Add
           </Button>
         </div>
       )}
-      <div>
+      <div className="min-w-0">
         <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2 text-start">
           Members ({members.length})
         </h3>
-        <div className="space-y-2 h-[70px] overflow-y-auto pr-1">
+        {/* Контейнер списка с фиксированной высотой 80px и скроллом */}
+        <div className="space-y-2 h-[80px] overflow-y-auto pr-1">
           {members.map((m) => (
             <div key={m.id} className="flex items-center gap-2 text-sm">
               <Avatar

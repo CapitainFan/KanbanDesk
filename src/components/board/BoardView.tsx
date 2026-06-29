@@ -113,7 +113,6 @@ export function BoardView({ boardId }: BoardViewProps) {
     const taskId = active.id as string
     const overId = over.id as string
 
-    // Find columns from current Redux state (no handleDragOver, so unchanged)
     const activeColId = findTaskColumn(taskId)
     const overColId =
       over.data.current?.type === 'column'
@@ -128,24 +127,18 @@ export function BoardView({ boardId }: BoardViewProps) {
           ? targetTasks.length
           : targetTasks.findIndex((t) => t.id === overId)
 
-      // @dnd-kit: "over" means "insert BEFORE this item".
-      // When dragging DOWN, the user expects the task AFTER the hovered item.
-      // We push newPos forward by 1 so the task lands AFTER overIdx, not before it.
       const activeIdx = targetTasks.findIndex((t) => t.id === taskId)
       const newPosRaw = overIdx >= 0 ? overIdx : targetTasks.length
       const newPos =
         over.data.current?.type === 'column'
           ? targetTasks.length
           : activeIdx >= 0 && newPosRaw > activeIdx
-            ? newPosRaw + 1   // dragging DOWN → insert AFTER the over item
-            : newPosRaw        // dragging UP or cross-column → insert BEFORE the over item
+            ? newPosRaw + 1
+            : newPosRaw
 
-      // Calculate the insertion index accounting for index shift after removal
       const fromIdx = targetTasks.findIndex((t) => t.id === taskId)
       const insertAt = fromIdx >= 0 && newPos > fromIdx ? newPos - 1 : newPos
 
-      // OPTIMISTIC UPDATE: update Redux immediately before async API calls
-      // Use insertAt (not newPos) so optimistic update matches persistence
       dispatch(
         moveTaskInState({
           taskId,
@@ -155,9 +148,7 @@ export function BoardView({ boardId }: BoardViewProps) {
         })
       )
 
-      // Persist to DB
       if (activeColId === overColId) {
-        // Reorder within same column
         const arr = [...targetTasks]
         const taskFromIdx = arr.findIndex((t) => t.id === taskId)
         if (taskFromIdx === -1) return
@@ -169,7 +160,6 @@ export function BoardView({ boardId }: BoardViewProps) {
           }
         }
       } else {
-        // Move between columns: update positions in both columns
         await moveTask(taskId, overColId, newPos)
         const srcTasks = (tasks[activeColId] ?? []).filter((t) => t.id !== taskId)
         for (let i = 0; i < srcTasks.length; i++) {
