@@ -130,14 +130,12 @@ export function BoardView({ boardId }: BoardViewProps) {
       const sourceTasks = tasks[activeColId] ?? []
       const destTasks = tasks[overColId] ?? []
 
-      // Calculate insert index
       const overIndex =
         over.data.current?.type === 'column'
           ? destTasks.length
           : destTasks.findIndex((t) => t.id === overId)
       const insertIndex = overIndex < 0 ? destTasks.length : overIndex
 
-      // Optimistic update
       dispatch(
         moveTaskInState({
           taskId,
@@ -147,30 +145,27 @@ export function BoardView({ boardId }: BoardViewProps) {
         })
       )
 
-      // Build reorder payload
       const tasksToReorder: { id: string; position: number; column_id?: string }[] = []
 
       if (activeColId === overColId) {
-        // Same column: compute new order
         const allTasks = sourceTasks.filter((t) => t.id !== taskId)
         const movedTask = sourceTasks.find((t) => t.id === taskId)
         if (!movedTask) return
         allTasks.splice(insertIndex, 0, movedTask)
         allTasks.forEach((t, i) => tasksToReorder.push({ id: t.id, position: i }))
       } else {
-        // Different columns: update both columns + moved task
-        sourceTasks
-          .filter((t) => t.id !== taskId)
-          .forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: activeColId }))
+        const srcRemaining = sourceTasks.filter((t) => t.id !== taskId)
+        const dstRemaining = destTasks.filter((t) => t.id !== taskId)
+        const movedTask = sourceTasks.find((t) => t.id === taskId)
+        if (!movedTask) return
 
-        destTasks
-          .filter((t) => t.id !== taskId)
-          .forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: overColId }))
+        const newDest = [...dstRemaining]
+        newDest.splice(insertIndex, 0, movedTask)
 
-        tasksToReorder.push({ id: taskId, position: insertIndex, column_id: overColId })
+        srcRemaining.forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: activeColId }))
+        newDest.forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: overColId }))
       }
 
-      // Batch update positions
       await reorderTasks(tasksToReorder)
     } catch (e) {
       console.error('Drag error:', e)
