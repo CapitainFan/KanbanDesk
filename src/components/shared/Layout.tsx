@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { useAuthContext } from '../../providers/AuthContext'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import { toggleTheme } from '../../store/uiSlice'
 import { Button } from './Button'

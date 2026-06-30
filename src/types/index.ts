@@ -51,16 +51,10 @@ export interface Comment {
   profile?: Profile;
 }
 
-// Realtime subscription payload types
+export type TaskUpdate = Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'assignee_id'>
+
 export interface RealtimePayload {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
   new: Record<string, unknown>;
   old: Record<string, unknown>;
-}
-
-// Drag and drop types
-export interface DragItem {
-  id: string;
-  columnId: string;
-  position: number;
 }

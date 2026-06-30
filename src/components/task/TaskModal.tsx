@@ -1,66 +1,95 @@
-import { useEffect, useState } from 'react'
-import type { Comment } from '../../types'
+import { useState, useRef, useEffect } from 'react'
+import type { Comment, TaskUpdate } from '../../types'
 import { getComments, createComment, deleteComment } from '../../services/commentService'
-import { updateTask } from '../../services/taskService'
-import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { updateTask, deleteTask } from '../../services/taskService'
+import { useAppDispatch } from '../../hooks/useAppStore'
+import { useAuthContext } from '../../providers/AuthContext'
 import { closeTaskModal, updateSelectedTask } from '../../store/uiSlice'
-import { updateTaskInState } from '../../store/boardSlice'
+import { updateTaskInState, removeTask } from '../../store/boardSlice'
+import { useAppSelector } from '../../hooks/useAppStore'
 import { Modal } from '../shared/Modal'
 import { Button } from '../shared/Button'
 import { Textarea } from '../shared/Textarea'
 import { Avatar } from '../shared/Avatar'
+import { ConfirmModal } from '../shared/ConfirmModal'
 import toast from 'react-hot-toast'
 
-export function TaskModal() {
+function TaskModalContent({ task }: { task: import('../../types').Task }) {
   const dispatch = useAppDispatch()
   const { user } = useAuthContext()
-  const { selectedTask, isTaskModalOpen } = useAppSelector((s) => s.ui)
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
+  const [commentsLoading, setCommentsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Load comments on mount (component remounts when key/task changes)
   useEffect(() => {
-    if (selectedTask) {
-      getComments(selectedTask.id).then(setComments).catch(() => {})
-    }
-  }, [selectedTask])
+    getComments(task.id)
+      .then(setComments)
+      .catch((err) => {
+        console.error('Failed to load comments:', err)
+        toast.error('Failed to load comments')
+      })
+      .finally(() => setCommentsLoading(false))
+  }, [task.id])
 
-  if (!selectedTask) return null
-const handleUpdate = async (updates: Record<string, unknown>) => {
+  const handleUpdate = (updates: Partial<TaskUpdate>) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const updated = await updateTask(task.id, updates)
+        dispatch(updateTaskInState(updated))
+        dispatch(updateSelectedTask(updates))
+      } catch {
+        toast.error('Failed to update task')
+      }
+    }, 400)
+  }
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
     try {
-      const updated = await updateTask(selectedTask.id, updates)
-      dispatch(updateTaskInState(updated))
-      dispatch(updateSelectedTask(updates))
-    } catch { toast.error('Failed to update task') }
+      await deleteTask(task.id)
+      dispatch(removeTask({ taskId: task.id, columnId: task.column_id }))
+      dispatch(closeTaskModal())
+      toast.success('Task deleted')
+    } catch {
+      toast.error('Failed to delete task')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !user) return
     try {
-      const comment = await createComment(selectedTask.id, user.id, newComment.trim())
+      const comment = await createComment(task.id, user.id, newComment.trim())
       setComments((prev) => [...prev, comment])
       setNewComment('')
-    } catch { toast.error('Failed to add comment') }
+    } catch {
+      toast.error('Failed to add comment')
+    }
   }
 
   const handleDeleteComment = async (commentId: string) => {
     try {
       await deleteComment(commentId)
       setComments((prev) => prev.filter((c) => c.id !== commentId))
-    } catch { toast.error('Failed to delete comment') }
+    } catch {
+      toast.error('Failed to delete comment')
+    }
   }
 
   return (
-    <Modal
-      isOpen={isTaskModalOpen}
-      onClose={() => dispatch(closeTaskModal())}
-      title={selectedTask.title}
-    >
+    <>
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Description</label>
           <Textarea
-            value={selectedTask.description ?? ''}
+            value={task.description ?? ''}
             onChange={(e) => handleUpdate({ description: e.target.value })}
             placeholder="Add a description..."
           />
@@ -70,8 +99,8 @@ const handleUpdate = async (updates: Record<string, unknown>) => {
           <div className="flex-1 min-w-[140px]">
             <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Priority</label>
             <select
-              value={selectedTask.priority}
-              onChange={(e) => handleUpdate({ priority: e.target.value })}
+              value={task.priority}
+              onChange={(e) => handleUpdate({ priority: e.target.value as TaskUpdate['priority'] })}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark"
             >
               <option value="low">Low</option>
@@ -83,7 +112,7 @@ const handleUpdate = async (updates: Record<string, unknown>) => {
             <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Due Date</label>
             <input
               type="date"
-              value={selectedTask.due_date ?? ''}
+              value={task.due_date ?? ''}
               onChange={(e) => handleUpdate({ due_date: e.target.value || null })}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark"
             />
@@ -95,38 +124,42 @@ const handleUpdate = async (updates: Record<string, unknown>) => {
             Comments ({comments.length})
           </h4>
           <div className="space-y-3 max-h-48 overflow-y-auto mb-3">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-2 text-sm">
-                <Avatar
-                  src={comment.profile?.avatar_url}
-                  name={comment.profile?.name}
-                  size="sm"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-text-primary dark:text-text-primary-dark">
-                      {comment.profile?.name ?? 'Unknown'}
-                    </span>
-                    <span className="text-xs text-text-secondary">
-                      {new Date(comment.created_at).toLocaleDateString()}
-                    </span>
-                    {comment.user_id === user?.id && (
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="text-red-500 hover:text-red-700 ml-auto"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-text-secondary">{comment.content}</p>
-                </div>
-              </div>
-            ))}
-            {comments.length === 0 && (
+            {commentsLoading ? (
+              <p className="text-xs text-text-secondary">Loading comments...</p>
+            ) : comments.length === 0 ? (
               <p className="text-xs text-text-secondary">No comments yet</p>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2 text-sm">
+                  <Avatar
+                    src={comment.profile?.avatar_url}
+                    name={comment.profile?.name}
+                    size="sm"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-text-primary dark:text-text-primary-dark">
+                        {comment.profile?.name ?? 'Unknown'}
+                      </span>
+                      <span className="text-xs text-text-secondary">
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </span>
+                      {comment.user_id === user?.id && (
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-red-500 hover:text-red-700 ml-auto"
+                          aria-label="Delete comment"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-text-secondary">{comment.content}</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
           <div className="flex gap-2">
@@ -142,7 +175,44 @@ const handleUpdate = async (updates: Record<string, unknown>) => {
             </Button>
           </div>
         </div>
+
+        <div className="pt-2 border-t border-border dark:border-border-dark">
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Task'}
+          </Button>
+        </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Delete task?"
+        message="Are you sure you want to delete this task?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        isLoading={isDeleting}
+      />
+    </>
+  )
+}
+
+export function TaskModal() {
+  const { selectedTask, isTaskModalOpen } = useAppSelector((s) => s.ui)
+  const dispatch = useAppDispatch()
+
+  return (
+    <Modal
+      isOpen={isTaskModalOpen}
+      onClose={() => dispatch(closeTaskModal())}
+      title={selectedTask?.title ?? 'Task'}
+    >
+      {selectedTask && <TaskModalContent key={selectedTask.id} task={selectedTask} />}
     </Modal>
   )
 }

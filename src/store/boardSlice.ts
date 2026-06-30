@@ -87,10 +87,9 @@ const boardSlice = createSlice({
       if (!task) return
 
       state.tasks[fromColumnId] = fromTasks.filter((t) => t.id !== taskId)
-      task.column_id = toColumnId
-      task.position = newPosition
+      const movedTask = { ...task, column_id: toColumnId, position: newPosition }
       if (!state.tasks[toColumnId]) state.tasks[toColumnId] = []
-      state.tasks[toColumnId].splice(newPosition, 0, task)
+      state.tasks[toColumnId].splice(newPosition, 0, movedTask)
       state.tasks[toColumnId] = state.tasks[toColumnId].map((t, i) => ({
         ...t,
         position: i,

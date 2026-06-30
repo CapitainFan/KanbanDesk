@@ -73,7 +73,7 @@ export function Column({
             </span>
           </h3>
         )}
-        <Button variant="ghost" size="sm" onClick={onDeleteColumn}>
+        <Button variant="ghost" size="sm" onClick={onDeleteColumn} aria-label="Delete column">
           <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>

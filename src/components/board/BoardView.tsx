@@ -6,19 +6,20 @@ import {
 } from '@dnd-kit/core'
 import type { Task } from '../../types'
 import { getColumns, createColumn, deleteColumn, updateColumn } from '../../services/columnService'
-import { getTasks, createTask, moveTask } from '../../services/taskService'
+import { getTasks, createTask, reorderTasks } from '../../services/taskService'
 import { getBoardMembers } from '../../services/boardService'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import {
   setColumns, addColumn, removeColumn, setTasks, addTask,
-  setMembers, setLoading, moveTaskInState,
+  setMembers, setLoading, moveTaskInState, updateColumnInState,
 } from '../../store/boardSlice'
 import { openTaskModal } from '../../store/uiSlice'
 import { useRealtime } from '../../hooks/useRealtime'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { useAuthContext } from '../../providers/AuthContext'
 import { Column } from './Column'
 import { TaskCard } from './TaskCard'
 import { Button } from '../shared/Button'
+import { ConfirmModal } from '../shared/ConfirmModal'
 import { PageLoader } from '../shared/Spinner'
 import toast from 'react-hot-toast'
 
@@ -31,6 +32,7 @@ export function BoardView({ boardId }: BoardViewProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [newColTitle, setNewColTitle] = useState('')
   const [showNewCol, setShowNewCol] = useState(false)
+  const [confirmDeleteCol, setConfirmDeleteCol] = useState<string | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -74,19 +76,20 @@ export function BoardView({ boardId }: BoardViewProps) {
     } catch { toast.error('Failed to add column') }
   }
 
-  const handleDeleteColumn = async (colId: string) => {
-    if (!confirm('Delete this column and all its tasks?')) return
+  const handleConfirmDeleteColumn = async () => {
+    if (!confirmDeleteCol) return
     try {
-      await deleteColumn(colId)
-      dispatch(removeColumn(colId))
+      await deleteColumn(confirmDeleteCol)
+      dispatch(removeColumn(confirmDeleteCol))
+      setConfirmDeleteCol(null)
       toast.success('Column deleted')
     } catch { toast.error('Failed to delete column') }
   }
 
   const handleRenameColumn = async (colId: string, title: string) => {
     try {
-      const updated = await updateColumn(colId, { title } as never)
-      dispatch({ type: 'board/updateColumnInState', payload: updated })
+      const updated = await updateColumn(colId, { title })
+      dispatch(updateColumnInState(updated))
     } catch { toast.error('Failed to rename column') }
   }
 
@@ -133,15 +136,11 @@ export function BoardView({ boardId }: BoardViewProps) {
       const activeIdx = targetTasks.findIndex((t) => t.id === taskId)
       const newPosRaw = overIdx >= 0 ? overIdx : targetTasks.length
       const newPos =
-        over.data.current?.type === 'column'
-          ? targetTasks.length
-          : activeIdx >= 0 && newPosRaw > activeIdx
-            ? newPosRaw + 1
-            : newPosRaw
+        activeIdx >= 0 && newPosRaw > activeIdx ? newPosRaw + 1 : newPosRaw
 
-      const fromIdx = targetTasks.findIndex((t) => t.id === taskId)
-      const insertAt = fromIdx >= 0 && newPos > fromIdx ? newPos - 1 : newPos
+      const insertAt = activeIdx >= 0 && newPos > activeIdx ? newPos - 1 : newPos
 
+      // Optimistic update
       dispatch(
         moveTaskInState({
           taskId,
@@ -151,34 +150,38 @@ export function BoardView({ boardId }: BoardViewProps) {
         })
       )
 
+      // Build list of all tasks that need position updates
+      const tasksToReorder: { id: string; position: number; column_id?: string }[] = []
+
       if (activeColId === overColId) {
-        const arr = [...targetTasks]
-        const taskFromIdx = arr.findIndex((t) => t.id === taskId)
-        if (taskFromIdx === -1) return
-        const [task] = arr.splice(taskFromIdx, 1)
-        arr.splice(insertAt, 0, task)
-        for (let i = 0; i < arr.length; i++) {
-          if (arr[i].position !== i) {
-            await moveTask(arr[i].id, overColId, i)
-          }
+        // Same column: update all tasks in the column
+        const allTasks = [...targetTasks]
+        const taskIdx = allTasks.findIndex((t) => t.id === taskId)
+        allTasks.splice(taskIdx, 1)
+        allTasks.splice(insertAt, 0, allTasks[taskIdx])
+        for (let i = 0; i < allTasks.length; i++) {
+          tasksToReorder.push({ id: allTasks[i].id, position: i })
         }
       } else {
-        await moveTask(taskId, overColId, newPos)
+        // Moved to different column
         const srcTasks = (tasks[activeColId] ?? []).filter((t) => t.id !== taskId)
-        for (let i = 0; i < srcTasks.length; i++) {
-          if (srcTasks[i].position !== i) {
-            await moveTask(srcTasks[i].id, activeColId, i)
-          }
-        }
         const dstTasks = targetTasks.filter((t) => t.id !== taskId)
+
+        // Source column reorder
+        for (let i = 0; i < srcTasks.length; i++) {
+          tasksToReorder.push({ id: srcTasks[i].id, position: i, column_id: activeColId })
+        }
+        // Destination column reorder
         for (let i = 0; i < dstTasks.length; i++) {
           const pos = i >= newPos ? i + 1 : i
-          if (dstTasks[i].position !== pos) {
-            await moveTask(dstTasks[i].id, overColId, pos)
-          }
+          tasksToReorder.push({ id: dstTasks[i].id, position: pos, column_id: overColId })
         }
+        // Moved task
+        tasksToReorder.push({ id: taskId, position: newPos, column_id: overColId })
       }
-      reloadAllTasks()
+
+      // Batch update positions
+      await reorderTasks(tasksToReorder)
     } catch (e) {
       console.error('Drag error:', e)
       toast.error('Move failed: ' + (e instanceof Error ? e.message : 'unknown'))
@@ -203,7 +206,7 @@ export function BoardView({ boardId }: BoardViewProps) {
               column={col}
               tasks={tasks[col.id] ?? []}
               onAddTask={(title) => handleAddTask(col.id, title)}
-              onDeleteColumn={() => handleDeleteColumn(col.id)}
+              onDeleteColumn={() => setConfirmDeleteCol(col.id)}
               onRename={(t) => handleRenameColumn(col.id, t)}
               onTaskClick={(task) => dispatch(openTaskModal(task))}
             />
@@ -231,6 +234,16 @@ export function BoardView({ boardId }: BoardViewProps) {
       <DragOverlay>
         {activeTask ? <div className="w-72 sm:w-80 p-2 opacity-90"><TaskCard task={activeTask} onClick={() => {}} /></div> : null}
       </DragOverlay>
+
+      <ConfirmModal
+        isOpen={confirmDeleteCol !== null}
+        title="Delete column?"
+        message="Delete this column and all its tasks?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleConfirmDeleteColumn}
+        onCancel={() => setConfirmDeleteCol(null)}
+      />
     </DndContext>
   )
 }

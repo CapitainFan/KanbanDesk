@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Task } from '../types'
+import type { Task, TaskUpdate } from '../types'
 
 async function attachAssignee(tasks: Task[]): Promise<Task[]> {
   if (tasks.length === 0) return tasks
@@ -60,7 +60,7 @@ export async function createTask(
   return task
 }
 
-export async function updateTask(id: string, updates: Partial<Task>) {
+export async function updateTask(id: string, updates: Partial<TaskUpdate>) {
   const { data: rawTask, error } = await supabase
     .from('tasks')
     .update(updates)
@@ -95,17 +95,26 @@ export async function moveTask(
 }
 
 export async function reorderTasks(
-  tasks: { id: string; position: number }[]
+  tasks: { id: string; position: number; column_id?: string }[]
 ) {
-  for (const task of tasks) {
-    const { data, error } = await supabase
+  // Batch update: update all tasks in a single request using OR filters
+  // Since Supabase doesn't support batch via OR, we use individual updates
+  // but we can use a transaction-like approach
+  const updates = tasks.map((t) => {
+    const update: Record<string, unknown> = { position: t.position }
+    if (t.column_id) update.column_id = t.column_id
+    return supabase
       .from('tasks')
-      .update({ position: task.position })
-      .eq('id', task.id)
+      .update(update)
+      .eq('id', t.id)
       .select()
+  })
+
+  const results = await Promise.all(updates)
+  for (const { error, data } of results) {
     if (error) throw error
     if (!data || data.length === 0) {
-      throw new Error(`Reorder blocked for task ${task.id}`)
+      throw new Error('Reorder blocked by RLS')
     }
   }
 }

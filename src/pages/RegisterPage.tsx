@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { RegisterForm } from '../components/auth/RegisterForm'
-import { useAuthContext } from '../providers/AuthProvider'
+import { useAuthContext } from '../providers/AuthContext'
 import { PageLoader } from '../components/shared/Spinner'
 
 export function RegisterPage() {

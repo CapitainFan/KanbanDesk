@@ -15,18 +15,23 @@ export function useRealtime(boardId: string | null) {
   const dispatch = useAppDispatch()
   const columnIdsRef = useRef<string[]>([])
   const columns = useAppSelector((s) => s.board.columns)
+  const tasksRef = useRef<Record<string, Task[]>>({})
+  const tasks = useAppSelector((s) => s.board.tasks)
 
-  // Keep column IDs ref updated
+  // Keep column IDs and tasks ref updated
   useEffect(() => {
     columnIdsRef.current = columns.map((c) => c.id)
   }, [columns])
+
+  useEffect(() => {
+    tasksRef.current = tasks
+  }, [tasks])
 
   useEffect(() => {
     if (!boardId) return
 
     const channel = supabase.channel(`board-${boardId}`)
 
-    // Subscribe to ALL tasks changes — filter by column_id client-side
     channel
       .on(
         'postgres_changes',
@@ -45,6 +50,9 @@ export function useRealtime(boardId: string | null) {
           if (payload.eventType === 'DELETE' && oldTask && !colIds.includes(oldTask.column_id)) return
 
           if (payload.eventType === 'INSERT') {
+            // Deduplicate: check if task already exists in any column
+            const allTasks = Object.values(tasksRef.current).flat()
+            if (allTasks.some((t) => t.id === task.id)) return
             dispatch(addTask(task))
           } else if (payload.eventType === 'UPDATE') {
             dispatch(updateTaskInState(task))

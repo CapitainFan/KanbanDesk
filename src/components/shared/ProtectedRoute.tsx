@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { useAuthContext } from '../../providers/AuthContext'
 import { PageLoader } from './Spinner'
 import type { ReactNode } from 'react'
 

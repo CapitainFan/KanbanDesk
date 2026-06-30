@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { useAuthContext } from '../../providers/AuthContext'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import { setBoards, addBoard, removeBoard, setLoading } from '../../store/boardSlice'
 import { getBoards, createBoard } from '../../services/boardService'
@@ -17,7 +17,7 @@ export function BoardList() {
   useEffect(() => {
     if (!user) return
     dispatch(setLoading(true))
-    getBoards(user.id)
+    getBoards()
       .then((data) => dispatch(setBoards(data)))
       .catch(() => toast.error('Failed to load boards'))
       .finally(() => dispatch(setLoading(false)))

@@ -190,4 +190,29 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ============================================
+-- 4. RPC: поиск пользователя по email
+-- ============================================
+create or replace function find_user_by_email(email_input text)
+returns table (
+  id uuid,
+  email text,
+  name text,
+  avatar_url text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    au.id,
+    au.email::text,
+    p.name,
+    p.avatar_url
+  from auth.users au
+  left join profiles p on p.id = au.id
+  where au.email = email_input
+  limit 5;
+$$;
 ```

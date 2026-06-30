@@ -17,7 +17,6 @@ export function BoardPage() {
 
   useEffect(() => {
     if (!boardId) return
-    setBoardTitle(null)
     ;(async () => {
       const { data } = await supabase
         .from('boards')

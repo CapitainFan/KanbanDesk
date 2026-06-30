@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import { addMember, removeMember } from '../../store/boardSlice'
-import { addBoardMember, removeBoardMember } from '../../services/boardService'
-import { useAuthContext } from '../../providers/AuthProvider'
+import { addBoardMember, removeBoardMember, findUserByEmail } from '../../services/boardService'
+import { useAuthContext } from '../../providers/AuthContext'
 import { Avatar } from '../shared/Avatar'
 import { Button } from '../shared/Button'
 import toast from 'react-hot-toast'
@@ -11,7 +11,8 @@ export function MemberManagement() {
   const dispatch = useAppDispatch()
   const { user } = useAuthContext()
   const { members, currentBoard } = useAppSelector((s) => s.board)
-  const [userId, setUserId] = useState('')
+  const [email, setEmail] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
 
   if (!currentBoard) return null
 
@@ -19,15 +20,31 @@ export function MemberManagement() {
     (m) => m.user_id === user?.id && m.role === 'owner'
   )
 
-  const handleAdd = async () => {
-    if (!userId.trim()) return
+  const handleAddByEmail = async () => {
+    if (!email.trim()) return
+    setIsAdding(true)
     try {
-      const member = await addBoardMember(currentBoard.id, userId.trim())
+      const users = await findUserByEmail(email.trim())
+      if (users.length === 0) {
+        toast.error('No user found with that email')
+        return
+      }
+      const foundUser = users[0]
+
+      // Check if already a member
+      if (members.some((m) => m.user_id === foundUser.id)) {
+        toast.error('User is already a member')
+        return
+      }
+
+      const member = await addBoardMember(currentBoard.id, foundUser.id)
       dispatch(addMember(member))
-      setUserId('')
+      setEmail('')
       toast.success('Member added')
     } catch {
-      toast.error('Failed to add member')
+      toast.error('Failed to add member. Make sure the RPC function is created in Supabase (see supabase-scripts.md)')
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -44,24 +61,30 @@ export function MemberManagement() {
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-2">
       {isOwner && (
-        <div className="flex flex-col sm:flex-row gap-1 md:mr-10">
-          <input
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="User ID to invite..."
-            className="w-full sm:w-auto px-2 py-1.5 text-sm rounded border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          <Button size="sm" onClick={handleAdd} disabled={!userId.trim()} className="self-start">
-            Add
-          </Button>
+        <div className="flex flex-col gap-1 md:mr-10 min-w-[200px] max-w-xs">
+          <div className="flex flex-col sm:flex-row gap-1">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddByEmail()}
+              placeholder="Email to invite..."
+              className="w-full sm:w-auto px-2 py-1.5 text-sm rounded border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <Button
+              size="sm"
+              onClick={handleAddByEmail}
+              disabled={!email.trim() || isAdding}
+              className="self-start"
+            >
+              {isAdding ? 'Adding...' : 'Add'}
+            </Button>
+          </div>
         </div>
       )}
       <div className="min-w-0">
         <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2 text-start">
           Members ({members.length})
         </h3>
-        {/* Контейнер списка с фиксированной высотой 80px и скроллом */}
         <div className="space-y-2 h-[80px] overflow-y-auto pr-1">
           {members.map((m) => (
             <div key={m.id} className="flex items-center gap-2 text-sm">
