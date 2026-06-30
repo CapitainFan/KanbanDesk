@@ -48,11 +48,11 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data
 }
 
-export async function updateProfile(profile: Partial<Profile>) {
+export async function updateProfile(profile: { id: string; name?: string | null }) {
   const { data, error } = await supabase
     .from('profiles')
     .update(profile)
-    .eq('id', profile.id!)
+    .eq('id', profile.id)
     .select()
     .single()
   if (error) throw error

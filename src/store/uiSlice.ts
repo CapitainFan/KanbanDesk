@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { Task } from '../types'
+import type { Task, TaskUpdate } from '../types'
 
 interface UiState {
   theme: 'light' | 'dark'
@@ -33,7 +33,7 @@ const uiSlice = createSlice({
       state.selectedTask = null
       state.isTaskModalOpen = false
     },
-    updateSelectedTask(state, action: PayloadAction<Partial<Task>>) {
+    updateSelectedTask(state, action: PayloadAction<Partial<TaskUpdate>>) {
       if (state.selectedTask) {
         state.selectedTask = { ...state.selectedTask, ...action.payload }
       }

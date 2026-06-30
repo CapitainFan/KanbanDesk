@@ -78,22 +78,6 @@ export async function deleteTask(id: string) {
   if (error) throw error
 }
 
-export async function moveTask(
-  taskId: string,
-  newColumnId: string,
-  newPosition: number
-) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .update({ column_id: newColumnId, position: newPosition })
-    .eq('id', taskId)
-    .select()
-  if (error) throw error
-  if (!data || data.length === 0) {
-    throw new Error('Task update blocked by RLS or task not found')
-  }
-}
-
 export async function reorderTasks(
   tasks: { id: string; position: number; column_id?: string }[]
 ) {

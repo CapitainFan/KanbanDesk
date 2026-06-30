@@ -30,7 +30,7 @@ export async function createColumn(boardId: string, title: string) {
   return data
 }
 
-export async function updateColumn(id: string, updates: Partial<Column>) {
+export async function updateColumn(id: string, updates: { title: string }) {
   const { data, error } = await supabase
     .from('columns')
     .update(updates)

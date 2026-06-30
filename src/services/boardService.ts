@@ -88,15 +88,6 @@ export async function findUserByEmail(email: string) {
   return data as { id: string; email: string; name: string; avatar_url: string | null }[]
 }
 
-export async function isRpcAvailable(): Promise<boolean> {
-  try {
-    await supabase.rpc('find_user_by_email', { email_input: 'test@test.com' })
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function removeBoardMember(memberId: string) {
   const { error } = await supabase
     .from('board_members')

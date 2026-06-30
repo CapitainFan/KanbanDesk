@@ -42,13 +42,9 @@ export async function createComment(
 }
 
 export async function deleteComment(id: string) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('comments')
     .delete()
     .eq('id', id)
-    .select()
   if (error) throw error
-  if (!data || data.length === 0) {
-    throw new Error('Comment delete blocked or not found')
-  }
 }

@@ -52,9 +52,3 @@ export interface Comment {
 }
 
 export type TaskUpdate = Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'assignee_id'>
-
-export interface RealtimePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-  new: Record<string, unknown>;
-  old: Record<string, unknown>;
-}
