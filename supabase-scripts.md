@@ -1,6 +1,6 @@
 # Список скпритов запущенных в supabase SQL Editor
 
-## Главнвый
+## Главнвый, дб и политики
 ```sql
 -- ============================================
 -- 1. Создание таблиц
@@ -171,7 +171,7 @@ create policy "Users can insert own profile"
 ```
 
 
-## Тригер 1 : Автоматическое создание профиля при регистрации
+## Тригеры и функии
 ```sql
 -- Функция, которая будет вызываться при вставке в auth.users
 create or replace function public.handle_new_user()
@@ -192,7 +192,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ============================================
--- 4. RPC: поиск пользователя по email
+-- RPC: поиск пользователя по email
 -- ============================================
 create or replace function find_user_by_email(email_input text)
 returns table (

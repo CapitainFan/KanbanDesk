@@ -127,18 +127,15 @@ export function BoardView({ boardId }: BoardViewProps) {
     if (!activeColId || !overColId) return
 
     try {
-      const targetTasks = tasks[overColId] ?? []
-      const overIdx =
+      const sourceTasks = tasks[activeColId] ?? []
+      const destTasks = tasks[overColId] ?? []
+
+      // Calculate insert index
+      const overIndex =
         over.data.current?.type === 'column'
-          ? targetTasks.length
-          : targetTasks.findIndex((t) => t.id === overId)
-
-      const activeIdx = targetTasks.findIndex((t) => t.id === taskId)
-      const newPosRaw = overIdx >= 0 ? overIdx : targetTasks.length
-      const newPos =
-        activeIdx >= 0 && newPosRaw > activeIdx ? newPosRaw + 1 : newPosRaw
-
-      const insertAt = activeIdx >= 0 && newPos > activeIdx ? newPos - 1 : newPos
+          ? destTasks.length
+          : destTasks.findIndex((t) => t.id === overId)
+      const insertIndex = overIndex < 0 ? destTasks.length : overIndex
 
       // Optimistic update
       dispatch(
@@ -146,38 +143,31 @@ export function BoardView({ boardId }: BoardViewProps) {
           taskId,
           fromColumnId: activeColId,
           toColumnId: overColId,
-          newPosition: insertAt,
+          newPosition: insertIndex,
         })
       )
 
-      // Build list of all tasks that need position updates
+      // Build reorder payload
       const tasksToReorder: { id: string; position: number; column_id?: string }[] = []
 
       if (activeColId === overColId) {
-        // Same column: update all tasks in the column
-        const allTasks = [...targetTasks]
-        const taskIdx = allTasks.findIndex((t) => t.id === taskId)
-        allTasks.splice(taskIdx, 1)
-        allTasks.splice(insertAt, 0, allTasks[taskIdx])
-        for (let i = 0; i < allTasks.length; i++) {
-          tasksToReorder.push({ id: allTasks[i].id, position: i })
-        }
+        // Same column: compute new order
+        const allTasks = sourceTasks.filter((t) => t.id !== taskId)
+        const movedTask = sourceTasks.find((t) => t.id === taskId)
+        if (!movedTask) return
+        allTasks.splice(insertIndex, 0, movedTask)
+        allTasks.forEach((t, i) => tasksToReorder.push({ id: t.id, position: i }))
       } else {
-        // Moved to different column
-        const srcTasks = (tasks[activeColId] ?? []).filter((t) => t.id !== taskId)
-        const dstTasks = targetTasks.filter((t) => t.id !== taskId)
+        // Different columns: update both columns + moved task
+        sourceTasks
+          .filter((t) => t.id !== taskId)
+          .forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: activeColId }))
 
-        // Source column reorder
-        for (let i = 0; i < srcTasks.length; i++) {
-          tasksToReorder.push({ id: srcTasks[i].id, position: i, column_id: activeColId })
-        }
-        // Destination column reorder
-        for (let i = 0; i < dstTasks.length; i++) {
-          const pos = i >= newPos ? i + 1 : i
-          tasksToReorder.push({ id: dstTasks[i].id, position: pos, column_id: overColId })
-        }
-        // Moved task
-        tasksToReorder.push({ id: taskId, position: newPos, column_id: overColId })
+        destTasks
+          .filter((t) => t.id !== taskId)
+          .forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: overColId }))
+
+        tasksToReorder.push({ id: taskId, position: insertIndex, column_id: overColId })
       }
 
       // Batch update positions
