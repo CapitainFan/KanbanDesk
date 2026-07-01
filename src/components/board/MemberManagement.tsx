@@ -41,7 +41,8 @@ export function MemberManagement() {
       dispatch(addMember(member))
       setEmail('')
       toast.success('Member added')
-    } catch {
+    } catch (e) {
+      console.error('Failed to add member:', e)
       toast.error('Failed to add member. Make sure the RPC function is created in Supabase (see supabase-scripts.md)')
     } finally {
       setIsAdding(false)
@@ -53,7 +54,8 @@ export function MemberManagement() {
       await removeBoardMember(memberId)
       dispatch(removeMember(memberId))
       toast.success('Member removed')
-    } catch {
+    } catch (e) {
+      console.error('Failed to remove member:', e)
       toast.error('Failed to remove member')
     }
   }

@@ -30,7 +30,8 @@ export function ProfilePage() {
       const updated = await updateProfile({ id: profile.id, name })
       dispatch(setProfile(updated))
       toast.success('Profile updated')
-    } catch {
+    } catch (e) {
+      console.error('Failed to update profile:', e)
       toast.error('Failed to update profile')
     } finally {
       setSaving(false)
@@ -42,7 +43,8 @@ export function ProfilePage() {
     try {
       await navigator.clipboard.writeText(user.id)
       toast.success('User ID copied!')
-    } catch {
+    } catch (e) {
+      console.error('Failed to copy using clipboard API:', e)
       const textarea = document.createElement('textarea')
       textarea.value = user.id
       document.body.appendChild(textarea)
@@ -58,7 +60,8 @@ export function ProfilePage() {
     try {
       await navigator.clipboard.writeText(user.email)
       toast.success('Email copied!')
-    } catch {
+    } catch (e) {
+      console.error('Failed to copy using clipboard API:', e)
       const textarea = document.createElement('textarea')
       textarea.value = user.email
       document.body.appendChild(textarea)
