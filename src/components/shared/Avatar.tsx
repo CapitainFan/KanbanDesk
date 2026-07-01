@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 interface AvatarProps {
   src?: string | null
   name?: string | null
@@ -7,12 +9,15 @@ interface AvatarProps {
 const sizes = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-10 h-10 text-base' }
 
 export function Avatar({ src, name, size = 'md' }: AvatarProps) {
-  if (src) {
+  const [imgError, setImgError] = useState(false)
+
+  if (src && !imgError) {
     return (
       <img
         src={src}
-        alt={name ?? ''}
+        alt={name ?? 'User avatar'}
         className={`${sizes[size]} rounded-full object-cover`}
+        onError={() => setImgError(true)}
       />
     )
   }

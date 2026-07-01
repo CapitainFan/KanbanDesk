@@ -17,7 +17,7 @@ export function BoardList() {
   useEffect(() => {
     if (!user) return
     dispatch(setLoading(true))
-    getBoards()
+    getBoards(user.id)
       .then((data) => dispatch(setBoards(data)))
       .catch((e) => {
         console.error('Failed to load boards:', e)

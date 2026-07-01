@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { Task, TaskUpdate } from '../types'
+import type { Task } from '../types'
+import { getItem, setItem } from '../utils/storage'
 
 interface UiState {
   theme: 'light' | 'dark'
@@ -8,7 +9,7 @@ interface UiState {
 }
 
 const initialState: UiState = {
-  theme: (localStorage.getItem('theme') as 'light' | 'dark') ?? 'light',
+  theme: getItem<'light' | 'dark'>('theme', 'light'),
   selectedTask: null,
   isTaskModalOpen: false,
 }
@@ -19,11 +20,11 @@ const uiSlice = createSlice({
   reducers: {
     toggleTheme(state) {
       state.theme = state.theme === 'light' ? 'dark' : 'light'
-      localStorage.setItem('theme', state.theme)
+      setItem('theme', state.theme)
     },
     setTheme(state, action: PayloadAction<'light' | 'dark'>) {
       state.theme = action.payload
-      localStorage.setItem('theme', action.payload)
+      setItem('theme', action.payload)
     },
     openTaskModal(state, action: PayloadAction<Task>) {
       state.selectedTask = action.payload
@@ -33,7 +34,7 @@ const uiSlice = createSlice({
       state.selectedTask = null
       state.isTaskModalOpen = false
     },
-    updateSelectedTask(state, action: PayloadAction<Partial<TaskUpdate>>) {
+    updateSelectedTask(state, action: PayloadAction<Partial<Task>>) {
       if (state.selectedTask) {
         state.selectedTask = { ...state.selectedTask, ...action.payload }
       }

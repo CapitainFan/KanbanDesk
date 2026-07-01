@@ -43,14 +43,8 @@ export default function ProfilePage() {
       await navigator.clipboard.writeText(user.email)
       toast.success('Email copied!')
     } catch (e) {
-      console.error('Failed to copy using clipboard API:', e)
-      const textarea = document.createElement('textarea')
-      textarea.value = user.email
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-      toast.success('Email copied!')
+      console.error('Failed to copy email:', e)
+      toast.error('Failed to copy email')
     }
   }
 

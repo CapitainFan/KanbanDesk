@@ -81,22 +81,20 @@ export async function deleteTask(id: string) {
 export async function reorderTasks(
   tasks: { id: string; position: number; column_id?: string }[]
 ) {
-  try {
-    const { error } = await supabase.rpc('reorder_tasks_batch', {
-      p_tasks: tasks.map((t) => ({
-        id: t.id,
-        position: t.position,
-        column_id: t.column_id ?? null,
-      })),
-    })
-    if (error) throw error
-    return
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('function') && e.message.includes('not found')) {
-      console.warn('reorder_tasks_batch RPC not found, falling back to individual updates')
-    } else {
-      throw e
-    }
+  const { error: rpcError } = await supabase.rpc('reorder_tasks_batch', {
+    p_tasks: tasks.map((t) => ({
+      id: t.id,
+      position: t.position,
+      column_id: t.column_id ?? null,
+    })),
+  })
+
+  if (!rpcError) return
+
+  if (rpcError.code === 'PGRST202' || rpcError.message?.includes('function')) {
+    console.warn('reorder_tasks_batch RPC not found, falling back to individual updates')
+  } else {
+    throw rpcError
   }
 
   const updates = tasks.map((t) => {

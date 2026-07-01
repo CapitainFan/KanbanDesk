@@ -53,7 +53,7 @@ export function useTaskDnD(tasks: Record<string, Task[]>) {
           : destTasks.findIndex((t) => t.id === overId)
       const insertIndex = overIndex < 0 ? destTasks.length : overIndex
 
-      previousTasksRef.current = JSON.parse(JSON.stringify(tasks))
+      previousTasksRef.current = structuredClone(tasks)
 
       dispatch(
         moveTaskInState({

@@ -16,6 +16,8 @@ interface TaskDetailsProps {
   members: Array<{ user_id: string; profile?: { name?: string | null; avatar_url?: string | null } | null }>;
 }
 
+const SAVE_DEBOUNCE_MS = 400
+
 export function TaskDetails({
   taskId,
   initialDescription,
@@ -40,7 +42,7 @@ export function TaskDetails({
 
   const scheduleSave = useCallback((updates: Partial<TaskUpdate>) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => saveTask(updates), 400)
+    saveTimerRef.current = setTimeout(() => saveTask(updates), SAVE_DEBOUNCE_MS)
   }, [saveTask])
 
   const handleDescriptionChange = (value: string) => {

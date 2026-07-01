@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react'
-import type { Comment } from '../../types'
-import { getComments, createComment, deleteComment } from '../../services/commentService'
+import { useState } from 'react'
 import { useAuthContext } from '../../providers/AuthContext'
+import { useComments } from '../../hooks/useComments'
 import { Avatar } from '../shared/Avatar'
 import { Button } from '../shared/Button'
-import toast from 'react-hot-toast'
 
 interface CommentsSectionProps {
   taskId: string;
@@ -12,40 +10,20 @@ interface CommentsSectionProps {
 
 export function CommentsSection({ taskId }: CommentsSectionProps) {
   const { user } = useAuthContext()
-  const [comments, setComments] = useState<Comment[]>([])
+  const { comments, addComment, deleteComment } = useComments(taskId)
   const [newComment, setNewComment] = useState('')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getComments(taskId)
-      .then(setComments)
-      .catch((err) => {
-        console.error('Failed to load comments:', err)
-        toast.error('Failed to load comments')
-      })
-      .finally(() => setLoading(false))
-  }, [taskId])
+  const [sending, setSending] = useState(false)
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !user) return
-    try {
-      const comment = await createComment(taskId, user.id, newComment.trim())
-      setComments((prev) => [...prev, comment])
-      setNewComment('')
-    } catch (e) {
-      console.error('Failed to add comment:', e)
-      toast.error('Failed to add comment')
-    }
+    if (!newComment.trim() || !user || sending) return
+    setSending(true)
+    const success = await addComment(newComment)
+    if (success) setNewComment('')
+    setSending(false)
   }
 
   const handleDeleteComment = async (commentId: string) => {
-    try {
-      await deleteComment(commentId)
-      setComments((prev) => prev.filter((c) => c.id !== commentId))
-    } catch (e) {
-      console.error('Failed to delete comment:', e)
-      toast.error('Failed to delete comment')
-    }
+    await deleteComment(commentId)
   }
 
   return (
@@ -54,9 +32,7 @@ export function CommentsSection({ taskId }: CommentsSectionProps) {
         Comments ({comments.length})
       </h4>
       <div className="space-y-3 max-h-48 overflow-y-auto mb-3">
-        {loading ? (
-          <p className="text-xs text-text-secondary">Loading comments...</p>
-        ) : comments.length === 0 ? (
+        {comments.length === 0 ? (
           <p className="text-xs text-text-secondary">No comments yet</p>
         ) : (
           comments.map((comment) => (

@@ -1,13 +1,15 @@
 import { supabase } from '../lib/supabase'
 import type { Board, BoardMember } from '../types'
 
-export async function getBoards(): Promise<Board[]> {
+const DEFAULT_COLUMNS = ['To Do', 'In Progress', 'Done']
+
+export async function getBoards(userId: string): Promise<Board[]> {
   const { data, error } = await supabase
-    .from('boards')
-    .select('*')
-    .order('created_at', { ascending: false })
+    .from('board_members')
+    .select('board_id, boards(*)')
+    .eq('user_id', userId)
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((item: any) => item.boards) as Board[]
 }
 
 export async function createBoard(title: string, ownerId: string) {
@@ -28,8 +30,7 @@ export async function createBoard(title: string, ownerId: string) {
     throw new Error(memberError.message)
   }
 
-  const defaultColumns = ['To Do', 'In Progress', 'Done']
-  const columns = defaultColumns.map((title, idx) => ({
+  const columns = DEFAULT_COLUMNS.map((title, idx) => ({
     board_id: board.id,
     title,
     position: idx,

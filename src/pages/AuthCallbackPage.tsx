@@ -9,9 +9,11 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const handleAuth = async () => {
-      const params = new URLSearchParams(window.location.hash.replace('#', '?'))
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
+      const hashParams = new URLSearchParams(
+        window.location.hash.substring(1)
+      )
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
 
       if (accessToken) {
         await supabase.auth.setSession({
@@ -24,6 +26,7 @@ export default function AuthCallbackPage() {
 
       if (session) {
         toast.success('Signed in successfully')
+        window.history.replaceState(null, '', window.location.pathname)
         navigate('/dashboard', { replace: true })
       } else {
         toast.error('Authentication failed')
