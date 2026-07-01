@@ -58,13 +58,14 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     : listeners
 
   return (
-    <div
+    <button
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...wrappedListeners}
       onClick={handleClick}
-      className="bg-card dark:bg-card-dark border border-border dark:border-border-dark rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow group touch-none"
+      type="button"
+      className="w-full text-left bg-card dark:bg-card-dark border border-border dark:border-border-dark rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow group touch-none"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-text-primary dark:text-text-primary-dark break-words">
@@ -88,6 +89,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </button>
   )
 }

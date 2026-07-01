@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useRef, type FormEvent } from 'react'
 import { Layout } from '../components/shared/Layout'
 import { Button } from '../components/shared/Button'
 import { Input } from '../components/shared/Input'
@@ -14,6 +14,13 @@ export function ProfilePage() {
   const dispatch = useAppDispatch()
   const [name, setName] = useState(profile?.name ?? '')
   const [saving, setSaving] = useState(false)
+  const prevProfileIdRef = useRef(profile?.id)
+
+  // Sync local state when profile loads asynchronously (only on profile id change)
+  if (prevProfileIdRef.current !== profile?.id) {
+    prevProfileIdRef.current = profile?.id
+    setName(profile?.name ?? '')
+  }
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault()
@@ -71,8 +78,8 @@ export function ProfilePage() {
             {profile?.name ?? 'Profile'}
           </h2>
         </div>
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} />
+      <form key={profile?.id ?? 'no-profile'} onSubmit={handleSave} className="flex flex-col gap-4">
+        <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} />
 
           <div className="text-sm text-text-secondary bg-sidebar dark:bg-sidebar-dark rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-1">

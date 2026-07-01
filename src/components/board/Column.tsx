@@ -26,17 +26,24 @@ export function Column({
   const [isAdding, setIsAdding] = useState(false)
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(column.title)
+  const [isTaskAdding, setIsTaskAdding] = useState(false)
 
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
     data: { type: 'column', column },
   })
 
-  const handleAdd = () => {
-    if (!newTitle.trim()) return
-    onAddTask(newTitle.trim())
-    setNewTitle('')
-    setIsAdding(false)
+  const handleAdd = async () => {
+    if (!newTitle.trim() || isTaskAdding) return
+    setIsTaskAdding(true)
+    // onAddTask needs to be async-compatible; we await it even though it may not return a promise
+    try {
+      await onAddTask(newTitle.trim())
+      setNewTitle('')
+      setIsAdding(false)
+    } finally {
+      setIsTaskAdding(false)
+    }
   }
 
   const handleRename = () => {
@@ -107,7 +114,9 @@ export function Column({
               autoFocus
               className="flex-1 px-2 py-1.5 text-sm rounded border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <Button size="sm" onClick={handleAdd}>Add</Button>
+            <Button size="sm" onClick={handleAdd} disabled={isTaskAdding || !newTitle.trim()}>
+              {isTaskAdding ? 'Adding...' : 'Add'}
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>X</Button>
           </div>
         ) : (

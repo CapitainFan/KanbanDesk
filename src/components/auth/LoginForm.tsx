@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '../../services/authService'
 import { Button } from '../shared/Button'
 import { Input } from '../shared/Input'
 import toast from 'react-hot-toast'
 
 export function LoginForm() {
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,8 +16,7 @@ export function LoginForm() {
     try {
       await signIn(email, password)
       toast.success('Welcome back!')
-      // Wait for Redux state to update, then navigate
-      setTimeout(() => navigate('/dashboard', { replace: true }), 100)
+      // Navigation happens automatically via ProtectedRoute when user state changes
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed')
     } finally {

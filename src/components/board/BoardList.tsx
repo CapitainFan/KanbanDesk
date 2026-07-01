@@ -19,7 +19,10 @@ export function BoardList() {
     dispatch(setLoading(true))
     getBoards()
       .then((data) => dispatch(setBoards(data)))
-      .catch(() => toast.error('Failed to load boards'))
+      .catch((e) => {
+        console.error('Failed to load boards:', e)
+        toast.error('Failed to load boards')
+      })
       .finally(() => dispatch(setLoading(false)))
   }, [user, dispatch])
 
@@ -30,7 +33,8 @@ export function BoardList() {
       dispatch(addBoard(board))
       setTitle('')
       toast.success('Board created!')
-    } catch {
+    } catch (e) {
+      console.error('Failed to create board:', e)
       toast.error('Failed to create board')
     }
   }

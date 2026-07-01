@@ -8,6 +8,7 @@ import { MemberManagement } from '../components/board/MemberManagement'
 import { useAppDispatch } from '../hooks/useAppStore'
 import { setCurrentBoard } from '../store/boardSlice'
 import { Button } from '../components/shared/Button'
+import type { Board } from '../types'
 
 export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
@@ -20,12 +21,18 @@ export function BoardPage() {
     ;(async () => {
       const { data } = await supabase
         .from('boards')
-        .select('title')
+        .select('*')
         .eq('id', boardId)
         .single()
       if (data) {
         setBoardTitle(data.title)
-        dispatch(setCurrentBoard({ id: boardId, title: data.title } as never))
+        const board: Board = {
+          id: data.id,
+          title: data.title,
+          owner_id: data.owner_id,
+          created_at: data.created_at,
+        }
+        dispatch(setCurrentBoard(board))
       }
     })()
     return () => { dispatch(setCurrentBoard(null)) }

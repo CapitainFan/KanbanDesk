@@ -215,4 +215,27 @@ as $$
   where au.email = email_input
   limit 5;
 $$;
+
+-- ============================================
+-- RPC: Batch reorder tasks (transactional)
+-- ============================================
+create or replace function reorder_tasks_batch(p_tasks jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update tasks
+  set
+    position = (task_item->>'position')::int,
+    column_id = case
+      when task_item->>'column_id' is not null and task_item->>'column_id' <> 'null'
+      then (task_item->>'column_id')::uuid
+      else column_id
+    end
+  from jsonb_array_elements(p_tasks) as task_item
+  where tasks.id = (task_item->>'id')::uuid;
+end;
+$$;
 ```
