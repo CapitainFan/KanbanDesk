@@ -26,16 +26,13 @@ export function BoardView({ boardId }: BoardViewProps) {
   const { user } = useAuthContext()
   const { columns, tasks, isLoading } = useAppSelector((s) => s.board)
 
-  // Data loading
   useBoardData(boardId)
   useRealtime(boardId)
 
-  // Actions
   const { handleAddColumn, handleDeleteColumn, handleRenameColumn, addingColumn } = useColumnActions(boardId)
   const { handleAddTask } = useTaskActions()
   const { activeTask, handleDragStart, handleDragEnd } = useTaskDnD(tasks)
 
-  // UI state
   const [newColTitle, setNewColTitle] = useState('')
   const [showNewCol, setShowNewCol] = useState(false)
   const [confirmDeleteCol, setConfirmDeleteCol] = useState<string | null>(null)

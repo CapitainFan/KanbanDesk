@@ -36,7 +36,6 @@ export function Column({
   const handleAdd = async () => {
     if (!newTitle.trim() || isTaskAdding) return
     setIsTaskAdding(true)
-    // onAddTask needs to be async-compatible; we await it even though it may not return a promise
     try {
       await onAddTask(newTitle.trim())
       setNewTitle('')

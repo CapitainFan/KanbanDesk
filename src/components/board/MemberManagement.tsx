@@ -31,7 +31,6 @@ export function MemberManagement() {
       }
       const foundUser = users[0]
 
-      // Check if already a member
       if (members.some((m) => m.user_id === foundUser.id)) {
         toast.error('User is already a member')
         return

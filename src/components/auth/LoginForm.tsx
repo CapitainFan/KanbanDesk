@@ -16,7 +16,6 @@ export function LoginForm() {
     try {
       await signIn(email, password)
       toast.success('Welcome back!')
-      // Navigation happens automatically via ProtectedRoute when user state changes
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed')
     } finally {

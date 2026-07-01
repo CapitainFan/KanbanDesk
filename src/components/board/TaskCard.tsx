@@ -41,7 +41,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     onClick()
   }
 
-  // Intercept the listeners to track drag start
   const wrappedListeners = listeners
     ? {
         ...listeners,
@@ -50,7 +49,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           listeners.onPointerDown?.(e)
         },
         onPointerUp: (e: React.PointerEvent) => {
-          // Small delay to let DnD determine if it was a drag
           setTimeout(() => { wasDragged.current = false }, 0)
           listeners.onPointerUp?.(e)
         },

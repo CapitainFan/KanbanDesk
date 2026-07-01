@@ -80,7 +80,6 @@ export async function addBoardMember(boardId: string, userId: string) {
   return { ...data, profile: profile ?? null }
 }
 
-/** Find user by email. Requires RPC function in Supabase (see supabase-scripts.md). */
 export async function findUserByEmail(email: string) {
   const { data, error } = await supabase
     .rpc('find_user_by_email', { email_input: email })

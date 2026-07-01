@@ -53,10 +53,8 @@ export function useTaskDnD(tasks: Record<string, Task[]>) {
           : destTasks.findIndex((t) => t.id === overId)
       const insertIndex = overIndex < 0 ? destTasks.length : overIndex
 
-      // Save snapshot for rollback
       previousTasksRef.current = JSON.parse(JSON.stringify(tasks))
 
-      // Optimistic update
       dispatch(
         moveTaskInState({
           taskId,
@@ -66,7 +64,6 @@ export function useTaskDnD(tasks: Record<string, Task[]>) {
         })
       )
 
-      // Build reorder payload
       const tasksToReorder: { id: string; position: number; column_id?: string }[] = []
 
       if (activeColId === overColId) {
@@ -88,14 +85,12 @@ export function useTaskDnD(tasks: Record<string, Task[]>) {
         newDest.forEach((t, i) => tasksToReorder.push({ id: t.id, position: i, column_id: overColId }))
       }
 
-      // Persist reorder with transactional RPC (falls back to individual updates if RPC not found)
       try {
         await reorderTasks(tasksToReorder)
       } catch (e) {
         console.error('Drag error:', e)
         toast.error('Move failed: ' + (e instanceof Error ? e.message : 'unknown'))
         
-        // Rollback to previous state
         if (previousTasksRef.current) {
           for (const [colId, ts] of Object.entries(previousTasksRef.current)) {
             dispatch({
