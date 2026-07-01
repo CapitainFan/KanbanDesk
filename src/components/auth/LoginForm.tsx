@@ -24,10 +24,13 @@ export function LoginForm() {
   }
 
   const handleGoogle = async () => {
+    setLoading(true)
     try {
       await signInWithGoogle()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Google login failed')
+    } finally {
+      setLoading(false)
     }
   }
 

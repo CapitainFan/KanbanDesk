@@ -46,7 +46,9 @@ const boardSlice = createSlice({
       if (idx !== -1) state.columns[idx] = action.payload
     },
     removeColumn(state, action: PayloadAction<string>) {
-      state.columns = state.columns.filter((c) => c.id !== action.payload)
+      state.columns = state.columns
+        .filter((c) => c.id !== action.payload)
+        .map((c, i) => ({ ...c, position: i }))
       delete state.tasks[action.payload]
     },
     setTasks(

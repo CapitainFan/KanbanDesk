@@ -31,6 +31,8 @@ export function useRealtime(boardId: string | null) {
 
     const channel = supabase.channel(`board-${boardId}`)
 
+    // Use no server-side filter — client-side filtering with columnIdsRef
+    // is more reliable since column IDs change dynamically
     channel.on(
       'postgres_changes',
       {
@@ -53,6 +55,8 @@ export function useRealtime(boardId: string | null) {
           if (!currentColIds.includes(task.column_id)) return
           const allTasks = Object.values(tasksRef.current).flat()
           if (allTasks.some((t) => t.id === task.id)) return
+          // Only add if the column exists in state (avoid orphan tasks)
+          if (!tasksRef.current[task.column_id]) return
           dispatch(addTask(task))
           return
         }

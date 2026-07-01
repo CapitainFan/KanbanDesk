@@ -63,6 +63,27 @@ export function BoardView({ boardId }: BoardViewProps) {
 
   if (isLoading) return <PageLoader />
 
+  if (columns.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center max-w-sm">
+          <p className="text-text-secondary text-lg mb-4">No columns yet</p>
+          <p className="text-text-secondary text-sm mb-6">Create your first column to start organizing tasks</p>
+          <input
+            value={newColTitle}
+            onChange={(e) => setNewColTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onAddColumn()}
+            placeholder="Column title..."
+            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+          />
+          <Button onClick={onAddColumn} disabled={addingColumn || !newColTitle.trim()}>
+            {addingColumn ? 'Adding...' : 'Add Column'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <DndContext
       sensors={sensors}

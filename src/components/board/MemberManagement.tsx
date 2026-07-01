@@ -42,7 +42,7 @@ export function MemberManagement() {
       toast.success('Member added')
     } catch (e) {
       console.error('Failed to add member:', e)
-      toast.error('Failed to add member. Make sure the RPC function is created in Supabase (see supabase-scripts.md)')
+      toast.error('Failed to add member')
     } finally {
       setIsAdding(false)
     }

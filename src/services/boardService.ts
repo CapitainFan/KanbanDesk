@@ -9,7 +9,7 @@ export async function getBoards(userId: string): Promise<Board[]> {
     .select('board_id, boards(*)')
     .eq('user_id', userId)
   if (error) throw error
-  return (data ?? []).map((item: any) => item.boards) as Board[]
+  return (data ?? []).map((item: Record<string, unknown>) => (item.boards as Board)) as Board[]
 }
 
 export async function createBoard(title: string, ownerId: string) {

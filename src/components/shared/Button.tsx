@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes } from 'react'
+import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
@@ -25,19 +25,20 @@ const sizes = {
   lg: 'px-6 py-3 text-base gap-2',
 }
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = 'primary',
   size = 'md',
   className = '',
   children,
   ...props
-}: ButtonProps) {
+}, ref) {
   return (
     <button
+      ref={ref}
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
     </button>
   )
-}
+})

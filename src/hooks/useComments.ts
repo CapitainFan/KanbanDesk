@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getComments, createComment, deleteComment } from '../services/commentService'
 import { useAppDispatch, useAppSelector } from './useAppStore'
 import { setComments, addComment, removeComment } from '../store/commentsSlice'
@@ -9,14 +9,31 @@ export function useComments(taskId: string) {
   const dispatch = useAppDispatch()
   const { user } = useAuthContext()
   const comments = useAppSelector((state) => state.comments.byTaskId[taskId])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(false)
+
     getComments(taskId)
-      .then((data) => dispatch(setComments({ taskId, comments: data })))
-      .catch((err) => {
-        console.error('Failed to load comments:', err)
-        toast.error('Failed to load comments')
+      .then((data) => {
+        if (!cancelled) {
+          dispatch(setComments({ taskId, comments: data }))
+          setLoading(false)
+        }
       })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Failed to load comments:', err)
+          toast.error('Failed to load comments')
+          setLoadError(true)
+          setLoading(false)
+        }
+      })
+
+    return () => { cancelled = true }
   }, [taskId, dispatch])
 
   const handleAddComment = async (content: string) => {
@@ -44,6 +61,8 @@ export function useComments(taskId: string) {
 
   return {
     comments: comments ?? [],
+    loading,
+    loadError,
     addComment: handleAddComment,
     deleteComment: handleDeleteComment,
   }

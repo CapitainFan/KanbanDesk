@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAppDispatch, useAppSelector } from './useAppStore'
-import { setUser, setProfile, setLoading, logout } from '../store/authSlice'
+import { setUser, setProfile, setLoading, logout as logoutAction } from '../store/authSlice'
+import { resetBoard } from '../store/boardSlice'
 import { getProfile } from '../services/authService'
 
 export function useAuth() {
@@ -14,24 +15,29 @@ export function useAuth() {
 
     const initSession = async () => {
       dispatch(setLoading(true))
-      const { data: { session } } = await supabase.auth.getSession()
-      if (cancelled) return
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (cancelled) return
 
-      const currentUser = session?.user ?? null
-      dispatch(setUser(currentUser))
+        const currentUser = session?.user ?? null
+        dispatch(setUser(currentUser))
 
-      if (currentUser) {
-        try {
-          const p = await getProfile(currentUser.id)
-          if (!cancelled) {
-            dispatch(setProfile(p))
-            profileCacheRef.current = currentUser.id
+        if (currentUser) {
+          try {
+            const p = await getProfile(currentUser.id)
+            if (!cancelled) {
+              dispatch(setProfile(p))
+              profileCacheRef.current = currentUser.id
+            }
+          } catch (e) {
+            console.error('Failed to load profile:', e)
           }
-        } catch (e) {
-          console.error('Failed to load profile:', e)
         }
+      } catch (e) {
+        console.error('Failed to get session:', e)
+      } finally {
+        if (!cancelled) dispatch(setLoading(false))
       }
-      if (!cancelled) dispatch(setLoading(false))
     }
 
     initSession()
@@ -66,8 +72,13 @@ export function useAuth() {
   }, [dispatch])
 
   const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut()
-    dispatch(logout())
+    try {
+      await supabase.auth.signOut()
+    } catch (e) {
+      console.error('Failed to sign out:', e)
+    }
+    dispatch(logoutAction())
+    dispatch(resetBoard())
     profileCacheRef.current = null
   }, [dispatch])
 

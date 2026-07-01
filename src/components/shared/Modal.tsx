@@ -1,4 +1,4 @@
-import { useEffect, useId, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 
 interface ModalProps {
   isOpen: boolean
@@ -9,10 +9,16 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const titleId = useId()
+  const onCloseRef = useRef(onClose)
+
+  // Keep ref in sync without triggering effect
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     if (isOpen) {
       document.addEventListener('keydown', handleEsc)
@@ -22,7 +28,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       document.removeEventListener('keydown', handleEsc)
       document.body.style.overflow = ''
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen) return null
 

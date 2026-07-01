@@ -28,6 +28,7 @@ export function TaskDetails({
 }: TaskDetailsProps) {
   const dispatch = useAppDispatch()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingUpdatesRef = useRef<Partial<TaskUpdate>>({})
 
   const saveTask = useCallback(async (updates: Partial<TaskUpdate>) => {
     try {
@@ -41,8 +42,15 @@ export function TaskDetails({
   }, [taskId, dispatch])
 
   const scheduleSave = useCallback((updates: Partial<TaskUpdate>) => {
+    // Accumulate pending updates so fast changes don't overwrite each other
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates }
+
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => saveTask(updates), SAVE_DEBOUNCE_MS)
+    saveTimerRef.current = setTimeout(() => {
+      const updatesToSend = { ...pendingUpdatesRef.current }
+      pendingUpdatesRef.current = {}
+      saveTask(updatesToSend)
+    }, SAVE_DEBOUNCE_MS)
   }, [saveTask])
 
   const handleDescriptionChange = (value: string) => {

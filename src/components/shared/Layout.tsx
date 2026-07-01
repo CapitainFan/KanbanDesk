@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useAppStore'
 import { toggleTheme } from '../../store/uiSlice'
 import { Button } from './Button'
 import { Avatar } from './Avatar'
+import { ConfirmModal } from './ConfirmModal'
 
 interface LayoutProps {
   children: ReactNode
@@ -16,6 +17,7 @@ export function Layout({ children }: LayoutProps) {
   const theme = useAppSelector((s) => s.ui.theme)
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const isActive = (path: string) =>
     location.pathname === path
@@ -23,6 +25,10 @@ export function Layout({ children }: LayoutProps) {
       : 'text-text-secondary hover:text-text-primary dark:hover:text-text-primary-dark'
 
   const closeMenu = () => setMenuOpen(false)
+
+  const handleLogout = () => {
+    setShowLogoutConfirm(true)
+  }
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -72,7 +78,7 @@ export function Layout({ children }: LayoutProps) {
             </button>
             <div className="flex items-center gap-2">
               <Avatar src={profile?.avatar_url} name={profile?.name} size="sm" />
-              <Button variant="ghost" size="sm" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Logout
               </Button>
             </div>
@@ -107,7 +113,7 @@ export function Layout({ children }: LayoutProps) {
               <span className="flex-1 text-sm text-text-primary dark:text-text-primary-dark truncate">
                 {profile?.name ?? 'User'}
               </span>
-              <Button variant="ghost" size="sm" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Logout
               </Button>
             </div>
@@ -115,6 +121,19 @@ export function Layout({ children }: LayoutProps) {
         )}
       </header>
       <main className="flex-1">{children}</main>
+
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Sign out?"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        variant="danger"
+        onConfirm={() => {
+          setShowLogoutConfirm(false)
+          logout()
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   )
 }
