@@ -9,7 +9,7 @@ import { useAppDispatch } from '../hooks/useAppStore'
 import { setProfile } from '../store/authSlice'
 import toast from 'react-hot-toast'
 
-export function ProfilePage() {
+export default function ProfilePage() {
   const { profile, user } = useAuthContext()
   const dispatch = useAppDispatch()
   const [name, setName] = useState(profile?.name ?? '')

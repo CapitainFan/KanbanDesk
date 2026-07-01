@@ -3,7 +3,7 @@ import { LoginForm } from '../components/auth/LoginForm'
 import { useAuthContext } from '../providers/AuthContext'
 import { PageLoader } from '../components/shared/Spinner'
 
-export function LoginPage() {
+export default function LoginPage() {
   const { user, isLoading } = useAuthContext()
 
   if (isLoading) return <PageLoader />

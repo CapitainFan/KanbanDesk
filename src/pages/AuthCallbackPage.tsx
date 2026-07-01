@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { PageLoader } from '../components/shared/Spinner'
 import toast from 'react-hot-toast'
 
-export function AuthCallbackPage() {
+export default function AuthCallbackPage() {
   const navigate = useNavigate()
 
   useEffect(() => {

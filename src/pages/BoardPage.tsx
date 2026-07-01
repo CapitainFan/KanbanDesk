@@ -10,7 +10,7 @@ import { setCurrentBoard } from '../store/boardSlice'
 import { Button } from '../components/shared/Button'
 import type { Board } from '../types'
 
-export function BoardPage() {
+export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
   const dispatch = useAppDispatch()
   const [boardTitle, setBoardTitle] = useState<string | null>(null)

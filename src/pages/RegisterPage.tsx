@@ -3,7 +3,7 @@ import { RegisterForm } from '../components/auth/RegisterForm'
 import { useAuthContext } from '../providers/AuthContext'
 import { PageLoader } from '../components/shared/Spinner'
 
-export function RegisterPage() {
+export default function RegisterPage() {
   const { user, isLoading } = useAuthContext()
 
   if (isLoading) return <PageLoader />
