@@ -28,18 +28,12 @@ export function ConfirmModal({
   const confirmRef = useRef<HTMLButtonElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
 
-  // Focus trap: focus the confirm button when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Small delay to let the modal render
-      const timer = setTimeout(() => {
-        confirmRef.current?.focus()
-      }, 50)
-      return () => clearTimeout(timer)
+      confirmRef.current?.focus()
     }
   }, [isOpen])
 
-  // Focus trap: prevent tab from leaving the modal
   useEffect(() => {
     if (!isOpen) return
 
@@ -51,13 +45,11 @@ export function ConfirmModal({
       if (!confirmEl || !cancelEl) return
 
       if (e.shiftKey) {
-        // Shift+Tab: if focus is on cancel, jump to confirm
         if (document.activeElement === cancelEl) {
           e.preventDefault()
           confirmEl.focus()
         }
       } else {
-        // Tab: if focus is on confirm, jump to cancel
         if (document.activeElement === confirmEl) {
           e.preventDefault()
           cancelEl.focus()

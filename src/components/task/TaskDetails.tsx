@@ -42,7 +42,6 @@ export function TaskDetails({
   }, [taskId, dispatch])
 
   const scheduleSave = useCallback((updates: Partial<TaskUpdate>) => {
-    // Accumulate pending updates so fast changes don't overwrite each other
     pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates }
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)

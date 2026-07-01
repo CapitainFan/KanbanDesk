@@ -17,6 +17,7 @@ const priorityColors: Record<Task['priority'], string> = {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const wasDragged = useRef(false)
+  const startPos = useRef<{ x: number; y: number } | null>(null)
 
   const {
     attributes,
@@ -41,17 +42,31 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     onClick()
   }
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    startPos.current = { x: e.clientX, y: e.clientY }
+    wasDragged.current = false
+    listeners?.onPointerDown?.(e)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!startPos.current) return
+    const dx = e.clientX - startPos.current.x
+    const dy = e.clientY - startPos.current.y
+    if (Math.hypot(dx, dy) > 5) {
+      wasDragged.current = true
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    listeners?.onPointerUp?.(e)
+  }
+
   const wrappedListeners = listeners
     ? {
         ...listeners,
-        onPointerDown: (e: React.PointerEvent) => {
-          wasDragged.current = false
-          listeners.onPointerDown?.(e)
-        },
-        onPointerUp: (e: React.PointerEvent) => {
-          setTimeout(() => { wasDragged.current = false }, 0)
-          listeners.onPointerUp?.(e)
-        },
+        onPointerDown: handlePointerDown,
+        onPointerMove: handlePointerMove,
+        onPointerUp: handlePointerUp,
       }
     : listeners
 
