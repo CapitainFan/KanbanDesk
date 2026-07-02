@@ -5,6 +5,7 @@ import { addBoardMember, removeBoardMember, findUserByEmail } from '../../servic
 import { useAuthContext } from '../../providers/AuthContext'
 import { Avatar } from '../shared/Avatar'
 import { Button } from '../shared/Button'
+import { ConfirmModal } from '../shared/ConfirmModal'
 import toast from 'react-hot-toast'
 
 export function MemberManagement() {
@@ -13,6 +14,7 @@ export function MemberManagement() {
   const { members, currentBoard } = useAppSelector((s) => s.board)
   const [email, setEmail] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
 
   if (!currentBoard) return null
 
@@ -98,7 +100,7 @@ export function MemberManagement() {
                 {m.profile?.name ?? m.user_id.slice(0, 8)}
               </span>
               {isOwner && m.role !== 'owner' && (
-                <Button variant="ghost" size="sm" onClick={() => handleRemove(m.id)}>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveId(m.id)}>
                   <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -109,6 +111,21 @@ export function MemberManagement() {
           ))}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmRemoveId !== null}
+        title="Remove member?"
+        message="Are you sure you want to remove this member from the board?"
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmRemoveId) {
+            handleRemove(confirmRemoveId)
+            setConfirmRemoveId(null)
+          }
+        }}
+        onCancel={() => setConfirmRemoveId(null)}
+      />
     </div>
   )
 }

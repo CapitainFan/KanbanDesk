@@ -11,9 +11,9 @@ import { useColumnActions } from '../../hooks/useColumnActions'
 import { useTaskActions } from '../../hooks/useTaskActions'
 import { useTaskDnD } from '../../hooks/useTaskDnD'
 import { useRealtime } from '../../hooks/useRealtime'
+import { AddColumnCard } from './AddColumnCard'
 import { Column } from './Column'
 import { TaskCard } from './TaskCard'
-import { Button } from '../shared/Button'
 import { ConfirmModal } from '../shared/ConfirmModal'
 import { PageLoader } from '../shared/Spinner'
 import { openTaskModal } from '../../store/uiSlice'
@@ -33,22 +33,12 @@ export function BoardView({ boardId }: BoardViewProps) {
   const { handleAddTask } = useTaskActions()
   const { activeTask, handleDragStart, handleDragEnd } = useTaskDnD(tasks)
 
-  const [newColTitle, setNewColTitle] = useState('')
-  const [showNewCol, setShowNewCol] = useState(false)
   const [confirmDeleteCol, setConfirmDeleteCol] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   )
-
-  const onAddColumn = async () => {
-    const success = await handleAddColumn(newColTitle)
-    if (success) {
-      setNewColTitle('')
-      setShowNewCol(false)
-    }
-  }
 
   const onConfirmDeleteColumn = async () => {
     if (!confirmDeleteCol) return
@@ -69,16 +59,7 @@ export function BoardView({ boardId }: BoardViewProps) {
         <div className="text-center max-w-sm">
           <p className="text-text-secondary text-lg mb-4">No columns yet</p>
           <p className="text-text-secondary text-sm mb-6">Create your first column to start organizing tasks</p>
-          <input
-            value={newColTitle}
-            onChange={(e) => setNewColTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onAddColumn()}
-            placeholder="Column title..."
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-          />
-          <Button onClick={onAddColumn} disabled={addingColumn || !newColTitle.trim()}>
-            {addingColumn ? 'Adding...' : 'Add Column'}
-          </Button>
+          <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />
         </div>
       </div>
     )
@@ -104,26 +85,7 @@ export function BoardView({ boardId }: BoardViewProps) {
               onTaskClick={(task) => dispatch(openTaskModal(task))}
             />
           ))}
-          <div className="flex-shrink-0 w-72 sm:w-80">
-            {showNewCol ? (
-              <div className="bg-sidebar dark:bg-sidebar-dark rounded-xl p-3 space-y-2">
-                <input value={newColTitle} onChange={(e) => setNewColTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && onAddColumn()}
-                  placeholder="Column title..." autoFocus
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-card dark:border-border-dark dark:bg-card-dark outline-none focus:ring-1 focus:ring-blue-500" />
-                <div className="flex gap-1">
-                  <Button size="sm" onClick={onAddColumn} disabled={addingColumn || !newColTitle.trim()}>
-                    {addingColumn ? 'Adding...' : 'Add'}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowNewCol(false)}>Cancel</Button>
-                </div>
-              </div>
-            ) : (
-              <button onClick={() => setShowNewCol(true)}
-                className="w-full bg-sidebar dark:bg-sidebar-dark rounded-xl p-3 text-sm text-text-secondary hover:text-text-primary dark:hover:text-text-primary-dark transition-colors"
-              >+ Add Column</button>
-            )}
-          </div>
+          <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />
         </div>
       </div>
       <DragOverlay>
