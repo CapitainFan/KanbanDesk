@@ -35,9 +35,6 @@ dispatch({ type: 'board/setTasks', ... })
 Есть fallback на отдельные update-запросы, но он не
 транзакционный. При частичной ошибке позиции могут
 рассинхронизироваться.
-
-❌ :
-
 10. BoardView стал лучше, но всё ещё знает слишком много
 Он всё ещё связывает DnD, realtime, CRUD колонок/задач, модалки
 и UI. Для production лучше ещё сильнее разделить orchestration и
@@ -45,6 +42,10 @@ presentational UI.
 11. MemberManagement удаляет участников без подтверждения
 Для owner/member management лучше использовать
 ConfirmModal, как для задач/колонок.
+
+
+❌ :
+
 12. Недостаточно правовой/role UX-логики на фронте
 Owner/member роли есть, но UI-ограничения неполные: member
 может видеть некоторые destructive controls до ошибки от RLS, если
