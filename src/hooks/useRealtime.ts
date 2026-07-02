@@ -10,17 +10,23 @@ import {
   removeColumn,
 } from '../store/boardSlice'
 import type { Task, Column } from '../types'
+import type { Profile } from '../types/profile'
+
+async function enrichAssignee(task: Task): Promise<Task> {
+  if (!task.assignee_id) return { ...task, assignee: null }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', task.assignee_id)
+    .single()
+  return { ...task, assignee: (profile as Profile | null) ?? null }
+}
 
 export function useRealtime(boardId: string | null) {
   const dispatch = useAppDispatch()
-  const columnIdsRef = useRef<string[]>([])
   const columns = useAppSelector((s) => s.board.columns)
   const tasksRef = useRef<Record<string, Task[]>>({})
   const tasks = useAppSelector((s) => s.board.tasks)
-
-  useEffect(() => {
-    columnIdsRef.current = columns.map((c) => c.id)
-  }, [columns])
 
   useEffect(() => {
     tasksRef.current = tasks
@@ -29,21 +35,24 @@ export function useRealtime(boardId: string | null) {
   useEffect(() => {
     if (!boardId) return
 
-    const channel = supabase.channel(`board-${boardId}`)
+    const columnIds = columns.map((c) => c.id)
+    if (columnIds.length === 0) return
 
-    // Use no server-side filter — client-side filtering with columnIdsRef
-    // is more reliable since column IDs change dynamically
+    const channel = supabase.channel(`board-${boardId}-${Date.now()}`)
+
+    // Server-side filter on column IDs — reduces unnecessary events
     channel.on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
         table: 'tasks',
+        filter: `column_id=in.(${columnIds.join(',')})`,
       },
-      (payload) => {
-        const task = payload.new as Task
+      async (payload) => {
+        const rawTask = payload.new as Task
         const oldTask = payload.old as Task | undefined
-        const currentColIds = columnIdsRef.current
+        const currentColIds = columnIds
 
         if (payload.eventType === 'DELETE' && oldTask) {
           if (!currentColIds.includes(oldTask.column_id)) return
@@ -52,25 +61,27 @@ export function useRealtime(boardId: string | null) {
         }
 
         if (payload.eventType === 'INSERT') {
-          if (!currentColIds.includes(task.column_id)) return
           const allTasks = Object.values(tasksRef.current).flat()
-          if (allTasks.some((t) => t.id === task.id)) return
-          // Only add if the column exists in state (avoid orphan tasks)
-          if (!tasksRef.current[task.column_id]) return
-          dispatch(addTask(task))
+          if (allTasks.some((t) => t.id === rawTask.id)) return
+          if (!tasksRef.current[rawTask.column_id]) return
+          const enriched = await enrichAssignee(rawTask)
+          dispatch(addTask(enriched))
           return
         }
 
         if (payload.eventType === 'UPDATE') {
-          if (oldTask && currentColIds.includes(oldTask.column_id) && !currentColIds.includes(task.column_id)) {
-            dispatch(removeTask({ taskId: task.id, columnId: oldTask.column_id }))
+          // Enrich with assignee profile before dispatching
+          const enriched = await enrichAssignee(rawTask)
+
+          if (oldTask && currentColIds.includes(oldTask.column_id) && !currentColIds.includes(enriched.column_id)) {
+            dispatch(removeTask({ taskId: enriched.id, columnId: oldTask.column_id }))
             return
           }
-          if (oldTask && oldTask.column_id !== task.column_id) {
-            dispatch(removeTask({ taskId: task.id, columnId: oldTask.column_id }))
+          if (oldTask && oldTask.column_id !== enriched.column_id) {
+            dispatch(removeTask({ taskId: enriched.id, columnId: oldTask.column_id }))
           }
-          if (currentColIds.includes(task.column_id)) {
-            dispatch(updateTaskInState(task))
+          if (currentColIds.includes(enriched.column_id)) {
+            dispatch(updateTaskInState(enriched))
           }
         }
       }
@@ -103,5 +114,5 @@ export function useRealtime(boardId: string | null) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [boardId, dispatch])
+  }, [boardId, dispatch, columns])
 }

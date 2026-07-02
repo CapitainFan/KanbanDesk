@@ -97,18 +97,15 @@ export async function reorderTasks(
     throw rpcError
   }
 
-  const updates = tasks.map((t) => {
+  // Sequential fallback to avoid partial desync on error
+  for (const t of tasks) {
     const update: Record<string, unknown> = { position: t.position }
     if (t.column_id) update.column_id = t.column_id
-    return supabase
+    const { error, data } = await supabase
       .from('tasks')
       .update(update)
       .eq('id', t.id)
       .select()
-  })
-
-  const results = await Promise.all(updates)
-  for (const { error, data } of results) {
     if (error) throw error
     if (!data || data.length === 0) {
       throw new Error('Reorder blocked by RLS')

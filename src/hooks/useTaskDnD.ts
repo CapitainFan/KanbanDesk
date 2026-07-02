@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { Task } from '../types'
 import { useAppDispatch } from './useAppStore'
-import { moveTaskInState } from '../store/boardSlice'
+import { moveTaskInState, setTasks } from '../store/boardSlice'
 import { reorderTasks } from '../services/taskService'
 import toast from 'react-hot-toast'
 
@@ -93,10 +93,7 @@ export function useTaskDnD(tasks: Record<string, Task[]>) {
         
         if (previousTasksRef.current) {
           for (const [colId, ts] of Object.entries(previousTasksRef.current)) {
-            dispatch({
-              type: 'board/setTasks',
-              payload: { columnId: colId, tasks: ts },
-            })
+            dispatch(setTasks({ columnId: colId, tasks: ts }))
           }
         }
       }
