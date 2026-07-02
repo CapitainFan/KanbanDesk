@@ -24,7 +24,8 @@ interface BoardViewProps { boardId: string }
 export function BoardView({ boardId }: BoardViewProps) {
   const dispatch = useAppDispatch()
   const { user } = useAuthContext()
-  const { columns, tasks, isLoading } = useAppSelector((s) => s.board)
+  const { columns, tasks, members, isLoading } = useAppSelector((s) => s.board)
+  const isOwner = members.some((m) => m.user_id === user?.id && m.role === 'owner')
 
   useBoardData(boardId)
   useRealtime(boardId)
@@ -58,8 +59,14 @@ export function BoardView({ boardId }: BoardViewProps) {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-sm">
           <p className="text-text-secondary text-lg mb-4">No columns yet</p>
-          <p className="text-text-secondary text-sm mb-6">Create your first column to start organizing tasks</p>
-          <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />
+          {isOwner ? (
+            <>
+              <p className="text-text-secondary text-sm mb-6">Create your first column to start organizing tasks</p>
+              <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />
+            </>
+          ) : (
+            <p className="text-text-secondary text-sm">Waiting for an owner to add columns</p>
+          )}
         </div>
       </div>
     )
@@ -83,9 +90,10 @@ export function BoardView({ boardId }: BoardViewProps) {
               onDeleteColumn={() => setConfirmDeleteCol(col.id)}
               onRename={(t) => handleRenameColumn(col.id, t)}
               onTaskClick={(task) => dispatch(openTaskModal(task))}
+              canDelete={isOwner}
             />
           ))}
-          <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />
+          {isOwner && <AddColumnCard onAdd={handleAddColumn} addingColumn={addingColumn} />}
         </div>
       </div>
       <DragOverlay>

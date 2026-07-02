@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuthContext } from '../../providers/AuthContext'
 import { useAppSelector, useAppDispatch } from '../../hooks/useAppStore'
 import { closeTaskModal } from '../../store/uiSlice'
 import { removeTask } from '../../store/boardSlice'
@@ -11,9 +12,11 @@ import { CommentsSection } from './CommentsSection'
 import toast from 'react-hot-toast'
 
 export function TaskModal() {
+  const { user } = useAuthContext()
   const { selectedTask, isTaskModalOpen } = useAppSelector((s) => s.ui)
   const { members } = useAppSelector((s) => s.board)
   const dispatch = useAppDispatch()
+  const isOwner = members.some((m) => m.user_id === user?.id && m.role === 'owner')
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -54,16 +57,18 @@ export function TaskModal() {
 
           <CommentsSection taskId={selectedTask.id} />
 
-          <div className="pt-2 border-t border-border dark:border-border-dark">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete Task'}
-            </Button>
-          </div>
+          {isOwner && (
+            <div className="pt-2 border-t border-border dark:border-border-dark">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Task'}
+              </Button>
+            </div>
+          )}
 
           <ConfirmModal
             isOpen={showDeleteConfirm}

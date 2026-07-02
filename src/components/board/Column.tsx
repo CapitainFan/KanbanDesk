@@ -12,6 +12,7 @@ interface ColumnProps {
   onDeleteColumn: () => void
   onRename: (title: string) => void
   onTaskClick: (task: Task) => void
+  canDelete: boolean
 }
 
 export function Column({
@@ -21,6 +22,7 @@ export function Column({
   onDeleteColumn,
   onRename,
   onTaskClick,
+  canDelete,
 }: ColumnProps) {
   const [newTitle, setNewTitle] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -79,11 +81,13 @@ export function Column({
             </span>
           </h3>
         )}
-        <Button variant="ghost" size="sm" onClick={onDeleteColumn} aria-label="Delete column">
-          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </Button>
+        {canDelete && (
+          <Button variant="ghost" size="sm" onClick={onDeleteColumn} aria-label="Delete column">
+            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </Button>
+        )}
       </div>
 
       <div
