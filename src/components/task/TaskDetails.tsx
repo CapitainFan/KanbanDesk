@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import type { TaskUpdate } from '../../types'
 import { updateTask } from '../../services/taskService'
 import { useAppDispatch } from '../../hooks/useAppStore'
@@ -29,8 +29,24 @@ export function TaskDetails({
   const dispatch = useAppDispatch()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingUpdatesRef = useRef<Partial<TaskUpdate>>({})
+  const [saving, setSaving] = useState(false)
+
+  const [draftDescription, setDraftDescription] = useState(initialDescription ?? '')
+  const [draftPriority, setDraftPriority] = useState(initialPriority)
+  const [draftAssigneeId, setDraftAssigneeId] = useState(initialAssigneeId ?? '')
+  const [draftDueDate, setDraftDueDate] = useState(initialDueDate ?? '')
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+    }
+  }, [])
 
   const saveTask = useCallback(async (updates: Partial<TaskUpdate>) => {
+    setSaving(true)
     try {
       const updated = await updateTask(taskId, updates)
       dispatch(updateTaskInState(updated))
@@ -38,6 +54,8 @@ export function TaskDetails({
     } catch (e) {
       console.error('Failed to update task:', e)
       toast.error('Failed to update task')
+    } finally {
+      setSaving(false)
     }
   }, [taskId, dispatch])
 
@@ -53,30 +71,39 @@ export function TaskDetails({
   }, [saveTask])
 
   const handleDescriptionChange = (value: string) => {
+    setDraftDescription(value)
     scheduleSave({ description: value })
   }
 
   const handlePriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newPriority = e.target.value as TaskUpdate['priority']
+    setDraftPriority(newPriority)
     scheduleSave({ priority: newPriority })
   }
 
   const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newAssigneeId = e.target.value || null
+    setDraftAssigneeId(e.target.value)
     scheduleSave({ assignee_id: newAssigneeId })
   }
 
   const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDueDate = e.target.value || null
+    setDraftDueDate(e.target.value)
     scheduleSave({ due_date: newDueDate })
   }
 
   return (
     <div className="space-y-4">
+      {saving && (
+        <div className="text-xs text-text-secondary dark:text-text-secondary-dark text-right animate-pulse">
+          Saving...
+        </div>
+      )}
       <div>
         <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Description</label>
         <Textarea
-          defaultValue={initialDescription ?? ''}
+          value={draftDescription}
           onChange={(e) => handleDescriptionChange(e.target.value)}
           placeholder="Add a description..."
         />
@@ -86,7 +113,7 @@ export function TaskDetails({
         <div className="flex-1 min-w-[140px]">
           <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Assignee</label>
           <select
-            defaultValue={initialAssigneeId ?? ''}
+            value={draftAssigneeId}
             onChange={handleAssigneeChange}
             className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark"
           >
@@ -101,7 +128,7 @@ export function TaskDetails({
         <div className="flex-1 min-w-[140px]">
           <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Priority</label>
           <select
-            defaultValue={initialPriority}
+            value={draftPriority}
             onChange={handlePriorityChange}
             className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark"
           >
@@ -114,7 +141,7 @@ export function TaskDetails({
           <label className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Due Date</label>
           <input
             type="date"
-            defaultValue={initialDueDate ?? ''}
+            value={draftDueDate}
             onChange={handleDueDateChange}
             className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-card text-text-primary dark:border-border-dark dark:bg-card-dark dark:text-text-primary-dark"
           />

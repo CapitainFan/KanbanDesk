@@ -43,6 +43,7 @@ export function TaskModal() {
       {selectedTask && (
         <div className="space-y-6">
           <TaskDetails
+            key={selectedTask.id}
             taskId={selectedTask.id}
             initialDescription={selectedTask.description}
             initialPriority={selectedTask.priority}
